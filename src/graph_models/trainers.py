@@ -6,6 +6,8 @@ from tqdm import tqdm
 import logging
 import matplotlib.pyplot as plt
 from pathlib import Path
+from intgnn.models import GNN_TopK
+from models import MeshGraphNet, GraphTransformer
 
 class BaseTrainer:
     def __init__(self, model, dataloader, optimizer, scheduler=None, device='cpu', **kwargs):
@@ -131,11 +133,25 @@ class GraphPredictionTrainer(BaseTrainer):
                 data.pos,
                 batch=data.batch
             )
-        else:
+        elif isinstance(self.model, MeshGraphNet):
+            # MeshGraphNet uses edge attributes
+            x_pred = self.model(
+                data.x,
+                data.edge_index,
+                data.edge_attr,
+                data.batch
+            )
+        elif isinstance(self.model, GraphTransformer):
             x_pred = self.model(
                 data.x,
                 data.edge_index,
                 data.edge_attr if hasattr(data, 'edge_attr') else None,
+                data.batch
+            )
+        else: # GraphConvolutionNetwork, GraphAttentionNetwork
+            x_pred = self.model(
+                data.x,
+                data.edge_index,
                 data.batch
             )
         return x_pred
