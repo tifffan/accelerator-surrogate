@@ -6,7 +6,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Train and evaluate graph-based models.")
 
     # Common arguments
-    parser.add_argument('--model', type=str, required=True, choices=['intgnn', 'gcn', 'gat', 'gtr', 'meshgraphnet'], help="Model to train.")
+    parser.add_argument('--model', type=str, required=True, choices=['intgnn', 'gcn', 'gat', 'gtr', 'mgn', 'gcn-ae', 'gat-ae', 'gtr-ae', 'mgn-ae'], help="Model to train.")
     parser.add_argument('--data_keyword', type=str, required=True, help="Common keyword to infer data directories")
     parser.add_argument('--base_data_dir', type=str, default="/sdf/data/ad/ard/u/tiffan/data/",
                         help="Base directory where the data is stored")
