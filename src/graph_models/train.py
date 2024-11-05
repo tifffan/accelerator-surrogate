@@ -124,18 +124,11 @@ if __name__ == "__main__":
         )
 
     elif args.model == 'gcn':
-        # Ensure pool_ratios length matches num_layers - 2
-        if len(args.pool_ratios) < args.num_layers - 2:
-            args.pool_ratios += [1.0] * (args.num_layers - 2 - len(args.pool_ratios))
-        elif len(args.pool_ratios) > args.num_layers - 2:
-            args.pool_ratios = args.pool_ratios[:args.num_layers - 2]
-
         # Model parameters specific to GraphConvolutionNetwork
         in_channels = sample.x.shape[1]
         hidden_dim = args.hidden_dim
         out_channels = sample.y.shape[1]
         num_layers = args.num_layers
-        pool_ratios = args.pool_ratios
 
         # Initialize GraphConvolutionNetwork model
         model = GraphConvolutionNetwork(
@@ -143,24 +136,14 @@ if __name__ == "__main__":
             hidden_dim=hidden_dim,
             out_channels=out_channels,
             num_layers=num_layers,
-            pool_ratios=pool_ratios,
         )
         
     elif args.model == 'gat':
-        # Ensure pool_ratios length matches num_layers - 2 (since we don't pool after the last layer)
-        if len(args.pool_ratios) < args.num_layers - 2:
-            # Pad pool_ratios with 1.0 to match num_layers - 2
-            args.pool_ratios += [1.0] * (args.num_layers - 2 - len(args.pool_ratios))
-        elif len(args.pool_ratios) > args.num_layers - 2:
-            # Trim pool_ratios to match num_layers - 2
-            args.pool_ratios = args.pool_ratios[:args.num_layers - 2]
-
         # Model parameters specific to GraphAttentionNetwork
         in_channels = sample.x.shape[1]
         hidden_dim = args.hidden_dim
         out_channels = sample.y.shape[1]
         num_layers = args.num_layers
-        pool_ratios = args.pool_ratios
         heads = args.gat_heads
 
         # Initialize GraphAttentionNetwork model
@@ -169,7 +152,6 @@ if __name__ == "__main__":
             hidden_dim=hidden_dim,
             out_channels=out_channels,
             num_layers=num_layers,
-            pool_ratios=pool_ratios,
             heads=heads,
         )
     
@@ -185,19 +167,12 @@ if __name__ == "__main__":
         dropout = args.gtr_dropout
         edge_dim = sample.edge_attr.shape[1] if sample.edge_attr is not None else None
 
-        # Adjust pool_ratios to match num_layers - 2
-        if len(pool_ratios) < num_layers - 2:
-            pool_ratios += [1.0] * (num_layers - 2 - len(pool_ratios))
-        elif len(pool_ratios) > num_layers - 2:
-            pool_ratios = pool_ratios[:num_layers - 2]
-
         # Initialize GraphTransformer model
         model = GraphTransformer(
             in_channels=in_channels,
             hidden_dim=hidden_dim,
             out_channels=out_channels,
             num_layers=num_layers,
-            pool_ratios=pool_ratios,
             num_heads=num_heads,
             concat=concat,
             dropout=dropout,

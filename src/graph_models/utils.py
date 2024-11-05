@@ -32,7 +32,6 @@ def generate_results_folder_name(args):
     parts.append(f"lr{args.lr}")
     parts.append(f"h{args.hidden_dim}")
     parts.append(f"ly{args.num_layers}")
-    parts.append(f"pr{'_'.join(map(lambda x: f'{x:.2f}', args.pool_ratios))}")
     parts.append(f"ep{args.nepochs}")
 
     # Append scheduler info if used
@@ -53,7 +52,8 @@ def generate_results_folder_name(args):
     elif args.model == 'meshgraphnet':
         pass
     elif args.model == 'intgnn':
-        pass  # TODO: Append any intgnn-specific parameters
+        parts.append(f"pr{'_'.join(map(lambda x: f'{x:.2f}', args.pool_ratios))}")
+        # TODO: Append other intgnn-specific parameters
 
     # Combine parts to form the folder name
     folder_name = '_'.join(map(str, parts))
