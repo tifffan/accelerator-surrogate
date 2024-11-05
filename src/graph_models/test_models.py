@@ -2,6 +2,7 @@
 
 import unittest
 import torch
+import torch_geometric
 from models import GraphConvolutionNetwork, GraphAttentionNetwork, GraphTransformer, MeshGraphNet
 
 class TestModels(unittest.TestCase):
@@ -11,7 +12,7 @@ class TestModels(unittest.TestCase):
         self.hidden_dim = 16
         self.out_channels = 5
         self.num_layers = 3
-        self.pool_ratios = [0.8, 0.8]
+        self.pool_ratios = [1.0] * (self.num_layers - 2)  # No pooling during tests
         self.edge_index = torch.randint(0, self.num_nodes, (2, 200))
         self.batch = torch.zeros(self.num_nodes, dtype=torch.long)
         self.x = torch.randn(self.num_nodes, self.in_channels)

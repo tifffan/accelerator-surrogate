@@ -20,7 +20,7 @@ from torch_geometric.typing import (
     Size,
 )
 
-from pooling import TopKPooling_Mod, avg_pool_mod, avg_pool_mod_no_x
+from intgnn.pooling import TopKPooling_Mod, avg_pool_mod, avg_pool_mod_no_x
 
 class Multiscale_MessagePassing_Layer(torch.nn.Module):
     def __init__(self,
