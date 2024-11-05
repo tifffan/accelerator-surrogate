@@ -29,7 +29,7 @@ wandb/*
 *.pdf
 
 # bash scripts
-*.sh
+# *.sh
 
 ### macOS gitignore
 
@@ -66,6 +66,7 @@ Temporary Items
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyc
 
 # C extensions
 *.so
