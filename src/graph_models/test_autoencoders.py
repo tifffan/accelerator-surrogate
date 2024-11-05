@@ -3,7 +3,7 @@
 import torch
 import torch.nn as nn
 from torch_geometric.data import Data
-from models import (
+from autoencoders import (
     GraphConvolutionalAutoEncoder,
     GraphAttentionAutoEncoder,
     GraphTransformerAutoEncoder,
@@ -27,7 +27,7 @@ def test_graph_convolutional_autoencoder():
         in_channels=num_node_features,
         hidden_dim=32,
         out_channels=num_node_features,
-        num_layers=3,
+        depth=3,
         pool_ratios=[0.5, 0.5]
     )
 
@@ -63,7 +63,7 @@ def test_graph_attention_autoencoder():
         in_channels=num_node_features,
         hidden_dim=32,
         out_channels=num_node_features,
-        num_layers=3,
+        depth=3,
         pool_ratios=[0.5, 0.5],
         heads=2
     )
@@ -102,7 +102,7 @@ def test_graph_transformer_autoencoder():
         in_channels=num_node_features,
         hidden_dim=32,
         out_channels=num_node_features,
-        num_layers=3,
+        depth=3,
         pool_ratios=[0.5, 0.5],
         num_heads=2,
         concat=True,
@@ -144,7 +144,7 @@ def test_mesh_graph_autoencoder():
         edge_in_dim=num_edge_features,
         node_out_dim=num_node_features,
         hidden_dim=32,
-        num_layers=3,
+        depth=3,
         pool_ratios=[0.5, 0.5, 0.5]
     )
 

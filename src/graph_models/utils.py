@@ -16,12 +16,14 @@ def generate_results_folder_name(args):
     # Base directory for results
     base_results_dir = args.base_results_dir
 
+    # Incorporate model name
+    base_results_dir = os.path.join(base_results_dir, args.model)
+    
     # Incorporate dataset name
     base_results_dir = os.path.join(base_results_dir, args.dataset)
 
     # Task-specific subfolder
-    task_folder = args.task
-    base_results_dir = os.path.join(base_results_dir, task_folder)
+    base_results_dir = os.path.join(base_results_dir, args.task)
 
     # Extract important arguments
     parts = []
