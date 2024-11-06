@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from intgnn.models import GNN_TopK
 from models import MeshGraphNet, GraphTransformer
+from autoencoders import MeshGraphAutoEncoder, GraphTransformerAutoEncoder
 
 class BaseTrainer:
     def __init__(self, model, dataloader, optimizer, scheduler=None, device='cpu', **kwargs):
@@ -115,13 +116,22 @@ class BaseTrainer:
         plt.close()
 
 
-class GraphPredictionTrainer(BaseTrainer):
-    def __init__(self, **kwargs):
+class GraphPredictionTrainer(BaseTrainer):        
+    def __init__(self, criterion=None, **kwargs):
         super().__init__(**kwargs)
+        
+        # Set the loss function
+        if criterion is not None:
+            self.criterion = criterion
+        else:
+            # Default loss function for classification tasks
+            self.criterion = torch.nn.MSELoss()
+        
+        logging.info(f"Using loss function: {self.criterion.__class__.__name__}")
 
     def train_step(self, data):
         x_pred = self.model_forward(data)
-        loss = torch.nn.functional.mse_loss(x_pred, data.y)
+        loss = self.criterion(x_pred, data.y)
         return loss
 
     def model_forward(self, data):
@@ -133,7 +143,7 @@ class GraphPredictionTrainer(BaseTrainer):
                 data.pos,
                 batch=data.batch
             )
-        elif isinstance(self.model, MeshGraphNet):
+        elif isinstance(self.model, MeshGraphNet) or isinstance(self.model, MeshGraphAutoEncoder):
             # MeshGraphNet uses edge attributes
             x_pred = self.model(
                 data.x,
@@ -141,7 +151,7 @@ class GraphPredictionTrainer(BaseTrainer):
                 data.edge_attr,
                 data.batch
             )
-        elif isinstance(self.model, GraphTransformer):
+        elif isinstance(self.model, GraphTransformer) or isinstance(self.model, GraphTransformerAutoEncoder):
             x_pred = self.model(
                 data.x,
                 data.edge_index,

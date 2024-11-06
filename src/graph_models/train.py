@@ -142,7 +142,7 @@ if __name__ == "__main__":
         if args.model.lower() == 'gcn-ae':
             in_channels = sample.x.shape[1]
             hidden_dim = args.hidden_dim
-            out_channels = sample.x.shape[1]  # Typically, autoencoder output matches input
+            out_channels = sample.y.shape[1]
             pool_ratios = args.pool_ratios
 
             model = GraphConvolutionalAutoEncoder(
@@ -157,7 +157,7 @@ if __name__ == "__main__":
         elif args.model.lower() == 'gat-ae':
             in_channels = sample.x.shape[1]
             hidden_dim = args.hidden_dim
-            out_channels = sample.x.shape[1]  # Typically, autoencoder output matches input
+            out_channels = sample.y.shape[1]
             pool_ratios = args.pool_ratios
             heads = args.gat_heads  # Ensure this argument exists
 
@@ -174,7 +174,7 @@ if __name__ == "__main__":
         elif args.model.lower() == 'gtr-ae':
             in_channels = sample.x.shape[1]
             hidden_dim = args.hidden_dim
-            out_channels = sample.x.shape[1]  # Typically, autoencoder output matches input
+            out_channels = sample.y.shape[1]
             pool_ratios = args.pool_ratios
             num_heads = args.gtr_heads  # Ensure this argument exists
             concat = args.gtr_concat    # Ensure this argument exists
@@ -197,7 +197,7 @@ if __name__ == "__main__":
         elif args.model.lower() == 'mgn-ae':
             node_in_dim = sample.x.shape[1]
             edge_in_dim = sample.edge_attr.shape[1] if hasattr(sample, 'edge_attr') and sample.edge_attr is not None else 0
-            node_out_dim = sample.x.shape[1]  # Typically, autoencoder output matches input
+            node_out_dim = sample.y.shape[1]  # Typically, autoencoder output matches input
             hidden_dim = args.hidden_dim
             pool_ratios = args.pool_ratios
 
@@ -437,7 +437,10 @@ if __name__ == "__main__":
         else:
             logging.info(f"Checkpoint set to: {checkpoint_path}")
 
-    # Initialize trainer
+    # Define the loss function based solely on node feature reconstruction
+    criterion = torch.nn.MSELoss()
+
+    # Initialize trainer with the custom loss function
     trainer = GraphPredictionTrainer(
         model=model,
         dataloader=dataloader,
@@ -450,19 +453,9 @@ if __name__ == "__main__":
         random_seed=args.random_seed,
         device=device,
         verbose=args.verbose,
+        criterion=criterion  # Pass the custom loss function here
     )
-    logging.info("Initialized GraphPredictionTrainer.")
-
-    # Save metadata
-    save_metadata(args, model, results_folder)
-    logging.info("Saved metadata.")
-
-    # Define the loss function based solely on node feature reconstruction
-    criterion = torch.nn.MSELoss()
-
-    # Modify the GraphPredictionTrainer to use the new loss function if necessary
-    # Assuming GraphPredictionTrainer allows specifying the loss function
-    trainer.set_loss_function(criterion)  # This line depends on your Trainer implementation
+    logging.info("Initialized GraphPredictionTrainer with custom loss function.")
 
     # Run train or evaluate
     if args.mode == 'train':
