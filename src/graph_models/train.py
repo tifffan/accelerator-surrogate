@@ -143,6 +143,9 @@ if __name__ == "__main__":
             in_channels = sample.x.shape[1]
             hidden_dim = args.hidden_dim
             out_channels = sample.y.shape[1]
+            
+            print("out_channels:", out_channels)
+            
             pool_ratios = args.pool_ratios
 
             model = GraphConvolutionalAutoEncoder(
@@ -456,6 +459,9 @@ if __name__ == "__main__":
         criterion=criterion  # Pass the custom loss function here
     )
     logging.info("Initialized GraphPredictionTrainer with custom loss function.")
+    
+    # Save metadata
+    save_metadata(args, model, results_folder)
 
     # Run train or evaluate
     if args.mode == 'train':

@@ -1,5 +1,6 @@
 # utils.py
 
+from datetime import datetime
 import os
 import numpy as np
 import logging
@@ -63,7 +64,8 @@ def generate_results_folder_name(args):
     return results_folder
 
 def save_metadata(args, model, results_folder):
-    metadata_path = os.path.join(results_folder, 'metadata.txt')
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    metadata_path = os.path.join(results_folder, f'metadata_{timestamp}.txt')
     os.makedirs(results_folder, exist_ok=True)
     with open(metadata_path, 'w') as f:
         f.write("=== Model Hyperparameters ===\n")
