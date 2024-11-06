@@ -1,5 +1,5 @@
 # data files
-data/*
+data/*.h5
 
 # scripts
 *.out
