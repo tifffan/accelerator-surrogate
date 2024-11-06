@@ -3,6 +3,7 @@ data/*
 
 # scripts
 *.out
+*.err
 
 # model checkpoints
 log/classification/**/checkpoints/best_model.pth
