@@ -24,13 +24,13 @@ module load cudatoolkit
 source activate ignn
 
 # Set the PYTHONPATH to include your project directory
-export PYTHONPATH=/global/homes/t/tiffan/accelerator-surrogate
+export PYTHONPATH=/global/homes/t/tiffan/repo/accelerator-surrogate
 
 # Print the PYTHONPATH for debugging purposes
 echo "PYTHONPATH is set to: $PYTHONPATH"
 
 # Navigate to the project directory
-cd /global/homes/t/tiffan/accelerator-surrogate
+cd /global/homes/t/tiffan/repo/accelerator-surrogate
 
 # Record the start time
 start_time=$(date +%s)
@@ -43,8 +43,8 @@ echo "Start time: $(date)"
 MODEL="gcn-ae"
 DATASET="graph_data_filtered_total_charge_51"  # Replace with your actual dataset name
 DATA_KEYWORD="knn_k5_weighted"
-BASE_DATA_DIR="/pscratch/sd/t/tiffan/data/"
-BASE_RESULTS_DIR="/pscratch/sd/t/tiffan/results/"
+BASE_DATA_DIR="/global/cfs/cdirs/m669/tiffan/data/"
+BASE_RESULTS_DIR="/global/cfs/cdirs/m669/tiffan/results/"
 TASK="predict_n6d"             # Replace with your specific task
 MODE="train"
 NTRAIN=128

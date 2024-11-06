@@ -46,7 +46,7 @@ MODE="train"
 NTRAIN=4156
 NEPOCHS=5
 POOL_RATIO="1.0"
-DEFAULT_BATCH_SIZE=32
+DEFAULT_BATCH_SIZE=128
 MAX_BATCH_SIZE=512  # Maximum batch size to consider
 
 # =============================================================================
