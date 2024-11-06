@@ -44,15 +44,15 @@ def generate_results_folder_name(args):
         parts.append(f"sch_lin_{args.lin_start_epoch}_{args.lin_end_epoch}_{args.lin_final_lr}")
 
     # Model-specific arguments
-    if args.model == 'gcn':
+    if args.model == 'gcn' or args.model == 'gcn-ae':
         pass
-    elif args.model == 'gat':
+    elif args.model == 'gat' or args.model == 'gat-ae':
         parts.append(f"heads{args.gat_heads}")
-    elif args.model == 'gtr':
+    elif args.model == 'gtr' or args.model == 'gtr-ae':
         parts.append(f"heads{args.gtr_heads}")
         parts.append(f"concat{args.gtr_concat}")
         parts.append(f"dropout{args.gtr_dropout}")
-    elif args.model == 'meshgraphnet':
+    elif args.model == 'mgn' or args.model == 'mgn-ae':
         pass
     elif args.model == 'intgnn':
         pass  # TODO: Append any intgnn-specific parameters

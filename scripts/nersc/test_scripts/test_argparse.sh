@@ -21,16 +21,17 @@ module load conda
 module load cudatoolkit
 
 # Activate the conda environment
-source activate ignn
+conda activate ignn
 
 # Set the PYTHONPATH to include your project directory
-export PYTHONPATH=/global/homes/t/tiffan/accelerator-surrogate
+export PYTHONPATH=/global/homes/t/tiffan/repo/accelerator-surrogate
 
 # Print the PYTHONPATH for debugging purposes
 echo "PYTHONPATH is set to: $PYTHONPATH"
 
 # Navigate to the project directory
-cd /global/homes/t/tiffan/accelerator-surrogate
+cd /global/homes/t/tiffan/repo/accelerator-surrogate
+find . -name "__pycache__" -exec rm -rf {} +
 
 # Record the start time
 start_time=$(date +%s)
@@ -52,28 +53,26 @@ BATCH_SIZE=4
 NEPOCHS=200
 HIDDEN_DIM=32
 NUM_LAYERS=4                   # Must be even for autoencoders (encoder + decoder)
-POOL_RATIOS="0.8"              # For depth=2 (num_layers=4), pool_ratios=depth-1=1
+POOL_RATIOS="1.0"              # For depth=2 (num_layers=4), pool_ratios=depth-1=1
 
 # =============================================================================
 # Construct the Python Command with All Required Arguments
 # =============================================================================
 
-
-python_command="python src/graph_models/train.py --help"
-# python_command="python src/graph_models/train.py \
-#     --model $MODEL \
-#     --dataset $DATASET \
-#     --task $TASK \
-#     --data_keyword $DATA_KEYWORD \
-#     --base_data_dir $BASE_DATA_DIR \
-#     --base_results_dir $BASE_RESULTS_DIR \
-#     --mode $MODE \
-#     --ntrain $NTRAIN \
-#     --batch_size $BATCH_SIZE \
-#     --nepochs $NEPOCHS \
-#     --hidden_dim $HIDDEN_DIM \
-#     --num_layers $NUM_LAYERS \
-#     --pool_ratios $POOL_RATIOS"
+python_command="python src/graph_models/train.py \
+    --model $MODEL \
+    --dataset $DATASET \
+    --task $TASK \
+    --data_keyword $DATA_KEYWORD \
+    --base_data_dir $BASE_DATA_DIR \
+    --base_results_dir $BASE_RESULTS_DIR \
+    --mode $MODE \
+    --ntrain $NTRAIN \
+    --batch_size $BATCH_SIZE \
+    --nepochs $NEPOCHS \
+    --hidden_dim $HIDDEN_DIM \
+    --num_layers $NUM_LAYERS \
+    --pool_ratios $POOL_RATIOS"
 
 # =============================================================================
 # Execute the Training
@@ -103,3 +102,12 @@ seconds=$((duration % 60))
 
 # Display the total time taken
 echo "Time taken: ${hours}h ${minutes}m ${seconds}s"
+
+# =============================================================================
+# Additional Debugging Information
+# =============================================================================
+
+# Print Python version and environment details
+echo "Python executable: $(which python)"
+echo "Python version: $(python --version)"
+echo "Conda environment: $(conda info --envs | grep '*' | awk '{print $1}')"

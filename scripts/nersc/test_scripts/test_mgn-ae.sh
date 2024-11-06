@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH -A m669
 #SBATCH -C gpu
-#SBATCH -q regular
-#SBATCH -t 3:50:00
+#SBATCH -q debug
+#SBATCH -t 0:30:00
 #SBATCH -n 1
 #SBATCH -c 64
 #SBATCH --gpus-per-task=1
@@ -24,13 +24,13 @@ module load cudatoolkit
 source activate ignn
 
 # Set the PYTHONPATH to include your project directory
-export PYTHONPATH=/global/homes/t/tiffan/accelerator-surrogate
+export PYTHONPATH=/global/homes/t/tiffan/repo/accelerator-surrogate
 
 # Print the PYTHONPATH for debugging purposes
 echo "PYTHONPATH is set to: $PYTHONPATH"
 
 # Navigate to the project directory
-cd /global/homes/t/tiffan/accelerator-surrogate
+cd /global/homes/t/tiffan/repo/accelerator-surrogate
 
 # Record the start time
 start_time=$(date +%s)
