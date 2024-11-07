@@ -28,6 +28,8 @@ class TestModels(unittest.TestCase):
         )
         output = model(self.x, self.edge_index, self.batch)
         self.assertEqual(output.shape, (self.num_nodes, self.out_channels))
+        
+        # print("GraphConvolutionNetwork unit test passed.")
 
     def test_graph_attention_network(self):
         model = GraphAttentionNetwork(
@@ -40,6 +42,8 @@ class TestModels(unittest.TestCase):
         )
         output = model(self.x, self.edge_index, self.batch)
         self.assertEqual(output.shape, (self.num_nodes, self.out_channels))
+        
+        # print("GraphAttentionNetwork unit test passed.")
 
     def test_graph_transformer(self):
         model = GraphTransformer(
@@ -55,6 +59,8 @@ class TestModels(unittest.TestCase):
         )
         output = model(self.x, self.edge_index, self.edge_attr, self.batch)
         self.assertEqual(output.shape, (self.num_nodes, self.out_channels))
+        
+        # print("GraphTransformer unit test passed.")
 
     def test_mesh_graph_net(self):
         model = MeshGraphNet(
@@ -66,6 +72,8 @@ class TestModels(unittest.TestCase):
         )
         output = model(self.x, self.edge_index, self.edge_attr, self.batch)
         self.assertEqual(output.shape, (self.num_nodes, self.out_channels))
+        
+        # print("MeshGraphNet unit test passed.")
 
 if __name__ == '__main__':
     unittest.main()
