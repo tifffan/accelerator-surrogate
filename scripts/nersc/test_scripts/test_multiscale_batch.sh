@@ -6,11 +6,11 @@
 #SBATCH -n 1
 #SBATCH -c 64
 #SBATCH --gpus-per-task=1
-#SBATCH --output=logs/train_multiscale_topk_%j.out
-#SBATCH --error=logs/train_multiscale_topk_%j.err
+#SBATCH --output=logs/train_multiscale_%j.out
+#SBATCH --error=logs/train_multiscale_%j.err
 
 # =============================================================================
-# SLURM Job Configuration for TopK Multiscale GNN (multiscale-topk)
+# SLURM Job Configuration for Multiscale GNN (multiscale)
 # =============================================================================
 
 export SLURM_CPU_BIND="cores"
@@ -36,7 +36,7 @@ echo "Start time: $(date)"
 # Define Variables for Training
 # =============================================================================
 
-MODEL="multiscale-topk"
+MODEL="multiscale"
 DATASET="graph_data_filtered_total_charge_51"
 DATA_KEYWORD="knn_k5_weighted"
 BASE_DATA_DIR="/pscratch/sd/t/tiffan/data/"
@@ -44,7 +44,7 @@ BASE_RESULTS_DIR="/pscratch/sd/t/tiffan/results/"
 TASK="predict_n6d"
 MODE="train"
 NTRAIN=4156
-NEPOCHS=5
+NEPOCHS=1
 DEFAULT_BATCH_SIZE=32
 MAX_BATCH_SIZE=512  # Maximum batch size to consider
 
@@ -63,19 +63,6 @@ for HIDDEN_DIM in 64 128 256 512; do
   for NUM_LAYERS in 4 6; do  # NUM_LAYERS must be even since max_level = NUM_LAYERS // 2
     batch_size=$DEFAULT_BATCH_SIZE
     max_reached=false
-
-    # Calculate max_level_topk based on NUM_LAYERS
-    MAX_LEVEL_TOPK=$((NUM_LAYERS / 2))
-
-    # Define pool ratios matching MAX_LEVEL_TOPK
-    if [ "$MAX_LEVEL_TOPK" -eq 2 ]; then
-      POOL_RATIOS="0.8 0.8"
-    elif [ "$MAX_LEVEL_TOPK" -eq 3 ]; then
-      POOL_RATIOS="0.8 0.8 0.8"
-    else
-      echo "Unsupported NUM_LAYERS: $NUM_LAYERS"
-      continue
-    fi
 
     while [ "$max_reached" = false ] && [ "$batch_size" -le "$MAX_BATCH_SIZE" ]; do
       RESULTS_DIR="${BASE_RESULTS_DIR}/${MODEL}/${DATASET}/${TASK}/h${HIDDEN_DIM}_l${NUM_LAYERS}_b${batch_size}"
@@ -96,10 +83,9 @@ for HIDDEN_DIM in 64 128 256 512; do
           --num_layers $NUM_LAYERS \
           --multiscale_n_mlp_hidden_layers $MULTISCALE_N_MLP_HIDDEN_LAYERS \
           --multiscale_n_mmp_layers $MULTISCALE_N_MMP_LAYERS \
-          --multiscale_n_message_passing_layers $MULTISCALE_N_MESSAGE_PASSING_LAYERS \
-          --pool_ratios $POOL_RATIOS"
+          --multiscale_n_message_passing_layers $MULTISCALE_N_MESSAGE_PASSING_LAYERS"
 
-      echo "Trying batch size $batch_size for hidden_dim=$HIDDEN_DIM, num_layers=$NUM_LAYERS, pool_ratios=($POOL_RATIOS)"
+      echo "Trying batch size $batch_size for hidden_dim=$HIDDEN_DIM, num_layers=$NUM_LAYERS"
       
       # Run training and check for OOM errors
       if $python_command; then
