@@ -6,7 +6,8 @@ from tqdm import tqdm
 import logging
 import matplotlib.pyplot as plt
 from pathlib import Path
-from intgnn.models import GNN_TopK
+from src.graph_models.models.multiscale.gnn import SinglescaleGNN, MultiscaleGNN, TopkMultiscaleGNN
+from src.graph_models.models.intgnn.models import GNN_TopK
 from src.graph_models.models.graph_networks import MeshGraphNet, GraphTransformer
 from src.graph_models.models.graph_autoencoders import MeshGraphAutoEncoder, GraphTransformerAutoEncoder
 
@@ -64,7 +65,7 @@ class BaseTrainer:
             # Save loss history
             avg_loss = total_loss / len(self.dataloader)
             self.loss_history.append(avg_loss)
-            logging.info(f'Epoch {epoch+1}/{self.nepochs}, Loss: {avg_loss:.4f}')
+            logging.info(f'Epoch {epoch+1}/{self.nepochs}, Loss: {avg_loss:.4e}')
 
             # Save checkpoint
             if (epoch + 1) % self.save_checkpoint_every == 0 or (epoch + 1) == self.nepochs:
@@ -142,6 +143,13 @@ class GraphPredictionTrainer(BaseTrainer):
                 data.edge_attr,
                 data.pos,
                 batch=data.batch
+            )
+        elif isinstance(self.model, SinglescaleGNN) or isinstance(self.model, MultiscaleGNN) or isinstance(self.model, TopkMultiscaleGNN):
+            x_pred = self.model(
+                data.x,
+                data.edge_index,
+                data.edge_attr,
+                data.batch
             )
         elif isinstance(self.model, MeshGraphNet) or isinstance(self.model, MeshGraphAutoEncoder):
             # MeshGraphNet uses edge attributes
