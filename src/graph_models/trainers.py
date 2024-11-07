@@ -7,8 +7,8 @@ import logging
 import matplotlib.pyplot as plt
 from pathlib import Path
 from intgnn.models import GNN_TopK
-from models import MeshGraphNet, GraphTransformer
-from autoencoders import MeshGraphAutoEncoder, GraphTransformerAutoEncoder
+from src.graph_models.models.graph_networks import MeshGraphNet, GraphTransformer
+from src.graph_models.models.graph_autoencoders import MeshGraphAutoEncoder, GraphTransformerAutoEncoder
 
 class BaseTrainer:
     def __init__(self, model, dataloader, optimizer, scheduler=None, device='cpu', **kwargs):

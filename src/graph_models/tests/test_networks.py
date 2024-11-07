@@ -1,4 +1,4 @@
-# test_models.py
+# test_networks.py
 
 import unittest
 import torch

@@ -57,6 +57,12 @@ def generate_results_folder_name(args):
         pass
     elif args.model == 'intgnn':
         pass  # TODO: Append any intgnn-specific parameters
+    elif args.model == 'singlescale':
+        pass
+    elif args.model == 'multiscale' or args.model == 'multiscale-topk':
+        parts.append(f"mlph{args.multiscale_n_mlp_hidden_layers}")
+        parts.append(f"mmply{args.multiscale_n_mmp_layers}")
+        parts.append(f"mply{args.multiscale_n_message_passing_layers}")
 
     # Combine parts to form the folder name
     folder_name = '_'.join(map(str, parts))

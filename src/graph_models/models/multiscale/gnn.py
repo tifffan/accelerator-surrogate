@@ -6,7 +6,7 @@ import torch_geometric.nn as tgnn
 from torch_scatter import scatter_mean
 from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.typing import Adj, OptTensor, PairTensor
-from pooling import TopKPooling_Mod, avg_pool_mod, avg_pool_mod_no_x
+from src.graph_models.models.multiscale.pooling import TopKPooling_Mod, avg_pool_mod, avg_pool_mod_no_x
 
 
 class TopkMultiscaleGNN(torch.nn.Module):
@@ -33,7 +33,8 @@ class TopkMultiscaleGNN(torch.nn.Module):
                  max_level_mmp: int, 
                  l_char: float,
                  max_level_topk: int,
-                 rf_topk: int,
+                #  rf_topk: int,
+                 pool_ratios: List[float],
                  name: Optional[str] = 'gnn'):
         super().__init__()
         
@@ -47,14 +48,18 @@ class TopkMultiscaleGNN(torch.nn.Module):
         self.max_level_mmp = max_level_mmp
         self.l_char = l_char
         self.max_level_topk = max_level_topk
-        self.rf_topk = rf_topk
+        # self.rf_topk = rf_topk
+        self.pool_ratios = pool_ratios,
         self.n_levels = max_level_topk + 1
         self.name = name 
 
         # ~~~~ TopK factor for levels 
-        self.pool_ratios = torch.zeros(self.max_level_topk)
-        for i in range(self.max_level_topk):
-            self.pool_ratios[i] = 1./self.rf_topk
+        # self.pool_ratios = torch.zeros(self.max_level_topk)
+        # for i in range(self.max_level_topk):
+        #     self.pool_ratios[i] = 1./self.rf_topk
+        
+        
+        assert(len(self.pool_ratios) == self.max_level_topk, "Length of pool_ratios must be equal to max_level_topk")
 
         # ~~~~ node encoder MLP  
         self.node_encoder = MLP(
