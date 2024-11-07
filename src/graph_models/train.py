@@ -15,8 +15,8 @@ from src.graph_models.models.graph_autoencoders import (
     GraphTransformerAutoEncoder,
     MeshGraphAutoEncoder
 )
-from src.graph_models.intgnn.models import GNN_TopK
-from src.graph_models.multiscale.gnn import (
+from src.graph_models.models.intgnn.models import GNN_TopK
+from src.graph_models.models.multiscale.gnn import (
     SinglescaleGNN, 
     MultiscaleGNN, 
     TopkMultiscaleGNN
