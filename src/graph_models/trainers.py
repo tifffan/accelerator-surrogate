@@ -148,6 +148,7 @@ class GraphPredictionTrainer(BaseTrainer):
             x_pred = self.model(
                 data.x,
                 data.edge_index,
+                data.pos,
                 data.edge_attr,
                 data.batch
             )
