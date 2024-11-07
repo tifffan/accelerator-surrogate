@@ -47,7 +47,7 @@ NTRAIN=4156
 NEPOCHS=1
 POOL_RATIO="1.0"
 DEFAULT_BATCH_SIZE=32
-MAX_BATCH_SIZE=512  # Maximum batch size to consider
+MAX_BATCH_SIZE=128  # Maximum batch size to consider
 
 # =============================================================================
 # Iterate Over Different Configurations and Find Max Batch Size
@@ -55,7 +55,7 @@ MAX_BATCH_SIZE=512  # Maximum batch size to consider
 
 declare -A max_batch_sizes  # To store max batch size for each config
 
-for HIDDEN_DIM in 64 128 256 512; do
+for HIDDEN_DIM in 128 256 512; do
   for NUM_LAYERS in 4 6; do
     batch_size=$DEFAULT_BATCH_SIZE
     max_reached=false

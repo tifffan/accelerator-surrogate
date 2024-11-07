@@ -46,8 +46,8 @@ MODE="train"
 NTRAIN=4156
 NEPOCHS=1
 POOL_RATIO="1.0"
-DEFAULT_BATCH_SIZE=32
-MAX_BATCH_SIZE=512  # Maximum batch size to consider
+DEFAULT_BATCH_SIZE=16
+MAX_BATCH_SIZE=64  # Maximum batch size to consider
 
 # Additional hyperparameters for Transformer models
 GTR_HEADS=8

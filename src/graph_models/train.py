@@ -51,7 +51,7 @@ def is_autoencoder_model(model_name):
     Returns:
         bool: True if it's an autoencoder model, False otherwise.
     """
-    return model_name.lower().endswith('-ae')
+    return model_name.lower().endswith('-ae') or model_name.lower() in ['multiscale-topk']
 
 if __name__ == "__main__":
     args = parse_args()
@@ -108,6 +108,8 @@ if __name__ == "__main__":
         sample = dataset[i]
         if hasattr(sample, 'edge_attr') and sample.edge_attr is not None:
             logging.info(f"Sample {i} edge_attr shape: {sample.edge_attr.shape}")
+            logging.info(f"Sample {i} edge_attr type: {type(sample.edge_attr)}")
+            logging.info(f"Sample {i} edge_attr dtype: {sample.edge_attr.dtype}")
         else:
             logging.warning(f"Sample {i} is missing edge_attr.")
 
@@ -148,10 +150,7 @@ if __name__ == "__main__":
         if args.model.lower() == 'gcn-ae':
             in_channels = sample.x.shape[1]
             hidden_dim = args.hidden_dim
-            out_channels = sample.y.shape[1]
-            
-            print("out_channels:", out_channels)
-            
+            out_channels = sample.y.shape[1]            
             pool_ratios = args.pool_ratios
 
             model = GraphConvolutionalAutoEncoder(
@@ -219,6 +218,47 @@ if __name__ == "__main__":
                 pool_ratios=pool_ratios
             )
             logging.info("Initialized MeshGraphAutoEncoder.")
+            
+        elif args.model.lower() == 'multiscale-topk':
+            # Initialize TopkMultiscaleGNN
+            input_node_channels = sample.x.shape[1]
+            input_edge_channels = sample.edge_attr.shape[1] if hasattr(sample, 'edge_attr') and sample.edge_attr is not None else 0
+            hidden_channels = args.hidden_dim
+            output_node_channels = sample.y.shape[1]
+            n_mlp_hidden_layers = args.multiscale_n_mlp_hidden_layers
+            n_mmp_layers = args.multiscale_n_mmp_layers
+            n_messagePassing_layers = args.multiscale_n_message_passing_layers
+            max_level_mmp = args.num_layers // 2 - 1  # n_levels = max_level + 1
+            max_level_topk = args.num_layers // 2 - 1
+            pool_ratios = args.pool_ratios
+
+            # Compute l_char (characteristic length scale)
+            edge_index = sample.edge_index
+            pos = sample.pos
+            edge_lengths = torch.norm(pos[edge_index[0]] - pos[edge_index[1]], dim=1)
+            l_char = edge_lengths.mean().item()
+            logging.info(f"Computed l_char (characteristic length scale): {l_char}")
+
+            name = 'topk_multiscale_gnn'
+
+            # Initialize model
+            model = TopkMultiscaleGNN(
+                input_node_channels=input_node_channels,
+                input_edge_channels=input_edge_channels,
+                hidden_channels=hidden_channels,
+                output_node_channels=output_node_channels,
+                n_mlp_hidden_layers=n_mlp_hidden_layers,
+                n_mmp_layers=n_mmp_layers,
+                n_messagePassing_layers=n_messagePassing_layers,
+                max_level_mmp=max_level_mmp,
+                max_level_topk=max_level_topk,
+                # rf_topk=rf_topk,
+                pool_ratios=pool_ratios,
+                l_char=l_char,
+                name=name
+            )
+            logging.info("Initialized TopkMultiscaleGNN model.")
+
 
         else:
             raise ValueError(f"Unknown autoencoder model {args.model}")
@@ -292,8 +332,8 @@ if __name__ == "__main__":
             input_edge_channels = sample.edge_attr.shape[1] if hasattr(sample, 'edge_attr') and sample.edge_attr is not None else 0
             hidden_channels = args.hidden_dim
             output_node_channels = sample.y.shape[1]
-            n_mlp_hidden_layers = 0  # Set based on earlier discussion to match the layer count
-            n_messagePassing_layers = args.num_layers  # Use num_layers from arguments
+            n_mlp_hidden_layers = 0  # Set based on MeshGraphNet
+            n_messagePassing_layers = args.num_layers
 
             name = 'singlescale_gnn'
 
@@ -318,7 +358,7 @@ if __name__ == "__main__":
             n_mlp_hidden_layers = args.multiscale_n_mlp_hidden_layers
             n_mmp_layers = args.multiscale_n_mmp_layers
             n_messagePassing_layers = args.multiscale_n_message_passing_layers
-            max_level = args.num_layers // 2
+            max_level = args.num_layers // 2 - 1  # n_levels = max_level + 1
 
             # Compute l_char (characteristic length scale)
             edge_index = sample.edge_index
@@ -343,46 +383,6 @@ if __name__ == "__main__":
                 name=name
             )
             logging.info("Initialized MultiscaleGNN model.")
-
-        elif args.model.lower() == 'multiscale-topk':
-            # Initialize TopkMultiscaleGNN
-            input_node_channels = sample.x.shape[1]
-            input_edge_channels = sample.edge_attr.shape[1] if hasattr(sample, 'edge_attr') and sample.edge_attr is not None else 0
-            hidden_channels = args.hidden_dim
-            output_node_channels = sample.y.shape[1]
-            n_mlp_hidden_layers = args.multiscale_n_mlp_hidden_layers
-            n_mmp_layers = args.multiscale_n_mmp_layers
-            n_messagePassing_layers = args.multiscale_n_message_passing_layers
-            max_level_mmp = args.num_layers // 2
-            max_level_topk = args.num_layers // 2
-            pool_ratios = args.pool_ratios
-
-            # Compute l_char (characteristic length scale)
-            edge_index = sample.edge_index
-            pos = sample.pos
-            edge_lengths = torch.norm(pos[edge_index[0]] - pos[edge_index[1]], dim=1)
-            l_char = edge_lengths.mean().item()
-            logging.info(f"Computed l_char (characteristic length scale): {l_char}")
-
-            name = 'topk_multiscale_gnn'
-
-            # Initialize model
-            model = TopkMultiscaleGNN(
-                input_node_channels=input_node_channels,
-                input_edge_channels=input_edge_channels,
-                hidden_channels=hidden_channels,
-                output_node_channels=output_node_channels,
-                n_mlp_hidden_layers=n_mlp_hidden_layers,
-                n_mmp_layers=n_mmp_layers,
-                n_messagePassing_layers=n_messagePassing_layers,
-                max_level_mmp=max_level_mmp,
-                max_level_topk=max_level_topk,
-                # rf_topk=rf_topk,
-                pool_ratios=pool_ratios,
-                l_char=l_char,
-                name=name
-            )
-            logging.info("Initialized TopkMultiscaleGNN model.")
 
         elif args.model.lower() == 'gcn':
             # Ensure pool_ratios length matches num_layers - 2
