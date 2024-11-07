@@ -6,7 +6,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Train and evaluate graph-based models.")
 
     # Common arguments
-    parser.add_argument('--model', type=str, required=True, choices=['intgnn', 'gcn', 'gat', 'gtr', 'mgn', 'gcn-ae', 'gat-ae', 'gtr-ae', 'mgn-ae'], help="Model to train.")
+    parser.add_argument('--model', type=str, required=True, choices=['intgnn', 'gcn', 'gat', 'gtr', 'mgn', 'gcn-ae', 'gat-ae', 'gtr-ae', 'mgn-ae', 'multiscale', 'multiscale-topk'], help="Model to train.")
     parser.add_argument('--data_keyword', type=str, required=True, help="Common keyword to infer data directories")
     parser.add_argument('--base_data_dir', type=str, default="/sdf/data/ad/ard/u/tiffan/data/",
                         help="Base directory where the data is stored")
@@ -51,5 +51,13 @@ def parse_args():
     parser.add_argument('--gtr_heads', type=int, default=4, help="Number of attention heads for TransformerConv layers")
     parser.add_argument('--gtr_concat', type=bool, default=True, help="Whether to concatenate or average attention head outputs")
     parser.add_argument('--gtr_dropout', type=float, default=0.0, help="Dropout rate for attention coefficients")
+    
+    # Multiscale-specific arguments
+    parser.add_argument('--multiscale_n_mlp_hidden_layers', type=int, default=2,
+                        help='Number of hidden layers in MLPs for multiscale models.')
+    parser.add_argument('--multiscale_n_mmp_layers', type=int, default=4,
+                        help='Number of Multiscale Message Passing layers for multiscale models.')
+    parser.add_argument('--multiscale_n_message_passing_layers', type=int, default=2,
+                        help='Number of Message Passing layers within each Multiscale Message Passing layer for multiscale models.')
 
     return parser.parse_args()
