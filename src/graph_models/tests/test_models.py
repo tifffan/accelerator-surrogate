@@ -3,7 +3,7 @@
 import unittest
 import torch
 import torch_geometric
-from models import GraphConvolutionNetwork, GraphAttentionNetwork, GraphTransformer, MeshGraphNet
+from src.graph_models.models.graph_networks import GraphConvolutionNetwork, GraphAttentionNetwork, GraphTransformer, MeshGraphNet
 
 class TestModels(unittest.TestCase):
     def setUp(self):
