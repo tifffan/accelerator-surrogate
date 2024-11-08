@@ -45,8 +45,8 @@ TASK="predict_n6d"
 MODE="train"
 NTRAIN=4156
 NEPOCHS=1
-DEFAULT_BATCH_SIZE=4
-MAX_BATCH_SIZE=32  # Maximum batch size to consider
+DEFAULT_BATCH_SIZE=32
+MAX_BATCH_SIZE=128  # Maximum batch size to consider
 
 # Multiscale-specific parameters
 MULTISCALE_N_MLP_HIDDEN_LAYERS=0

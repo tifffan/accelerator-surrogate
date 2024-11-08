@@ -45,13 +45,13 @@ TASK="predict_n6d"
 MODE="train"
 NTRAIN=4156
 NEPOCHS=1
-DEFAULT_BATCH_SIZE=4
-MAX_BATCH_SIZE=16  # Maximum batch size to consider
+DEFAULT_BATCH_SIZE=16
+MAX_BATCH_SIZE=128  # Maximum batch size to consider
 
 # Multiscale-specific parameters
-MULTISCALE_N_MLP_HIDDEN_LAYERS=2
-MULTISCALE_N_MMP_LAYERS=4
-MULTISCALE_N_MESSAGE_PASSING_LAYERS=2
+MULTISCALE_N_MLP_HIDDEN_LAYERS=0
+MULTISCALE_N_MMP_LAYERS=1
+MULTISCALE_N_MESSAGE_PASSING_LAYERS=1
 
 # =============================================================================
 # Iterate Over Different Configurations and Find Max Batch Size
@@ -59,19 +59,19 @@ MULTISCALE_N_MESSAGE_PASSING_LAYERS=2
 
 declare -A max_batch_sizes  # To store max batch size for each config
 
-for HIDDEN_DIM in 64 128 256 512; do
+for HIDDEN_DIM in 256 512; do # 64 128 256 512
   for NUM_LAYERS in 4 6; do  # NUM_LAYERS must be even since max_level = NUM_LAYERS // 2
     batch_size=$DEFAULT_BATCH_SIZE
     max_reached=false
 
     # Calculate max_level_topk based on NUM_LAYERS
-    MAX_LEVEL_TOPK=$((NUM_LAYERS / 2))
+    MAX_LEVEL_TOPK=$((NUM_LAYERS / 2 - 1))
 
     # Define pool ratios matching MAX_LEVEL_TOPK
     if [ "$MAX_LEVEL_TOPK" -eq 2 ]; then
       POOL_RATIOS="0.8 0.8"
-    elif [ "$MAX_LEVEL_TOPK" -eq 3 ]; then
-      POOL_RATIOS="0.8 0.8 0.8"
+    elif [ "$MAX_LEVEL_TOPK" -eq 1 ]; then
+      POOL_RATIOS="0.8"
     else
       echo "Unsupported NUM_LAYERS: $NUM_LAYERS"
       continue
