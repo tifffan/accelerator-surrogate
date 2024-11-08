@@ -144,7 +144,15 @@ class GraphPredictionTrainer(BaseTrainer):
                 data.pos,
                 batch=data.batch
             )
-        elif isinstance(self.model, SinglescaleGNN) or isinstance(self.model, MultiscaleGNN) or isinstance(self.model, TopkMultiscaleGNN):
+        elif isinstance(self.model, TopkMultiscaleGNN):
+            x_pred, mask = self.model(
+                data.x,
+                data.edge_index,
+                data.pos,
+                data.edge_attr,
+                data.batch
+            )
+        elif isinstance(self.model, SinglescaleGNN) or isinstance(self.model, MultiscaleGNN):
             x_pred = self.model(
                 data.x,
                 data.edge_index,

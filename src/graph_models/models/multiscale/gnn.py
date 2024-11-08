@@ -49,7 +49,7 @@ class TopkMultiscaleGNN(torch.nn.Module):
         self.l_char = l_char
         self.max_level_topk = max_level_topk
         # self.rf_topk = rf_topk
-        self.pool_ratios = pool_ratios,
+        self.pool_ratios = pool_ratios
         self.n_levels = max_level_topk + 1
         self.name = name 
 
@@ -646,11 +646,19 @@ class MultiscaleMessagePassingLayer(torch.nn.Module):
         self.l_char = l_char
         coarsen_factor = 2 
 
-        # lengthscales for levels 
-        self.lengthscales = torch.zeros(self.n_levels)
-        self.lengthscales[0] = self.l_char
-        for i in range(1,self.n_levels):
-            self.lengthscales[i] = self.lengthscales[i-1] * coarsen_factor
+        # # lengthscales for levels 
+        # self.lengthscales = torch.zeros(self.n_levels)
+        # self.lengthscales[0] = self.l_char
+        # for i in range(1,self.n_levels):
+        #     self.lengthscales[i] = self.lengthscales[i-1] * coarsen_factor
+        
+        # Initialize lengthscales
+        lengthscales = torch.zeros(self.n_levels)
+        lengthscales[0] = self.l_char
+        for i in range(1, self.n_levels):
+            lengthscales[i] = lengthscales[i - 1] * coarsen_factor
+        # Register lengthscales as a buffer
+        self.register_buffer('lengthscales', lengthscales)
 
         # down processors 
         self.processors_down = torch.nn.ModuleList()
