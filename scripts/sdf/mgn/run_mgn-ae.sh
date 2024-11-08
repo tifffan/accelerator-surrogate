@@ -1,14 +1,14 @@
 #!/bin/bash
 #SBATCH --account=ad:beamphysics
 #SBATCH --partition=ampere
-#SBATCH --job-name=mgn-ae_test
+#SBATCH --job-name=mgn-ae
 #SBATCH --output=logs/train_mgn_ae_%j.out
 #SBATCH --error=logs/train_mgn_ae_%j.err
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --gpus=1
 #SBATCH --nodes=1
-#SBATCH --mem-per-cpu=64G
+#SBATCH --mem-per-cpu=16G
 #SBATCH --time=10:00:00
 # =============================================================================
 # SLURM Job Configuration for Mesh Graph AutoEncoder (mgn-ae)
@@ -17,12 +17,12 @@
 # Bind CPUs to cores for optimal performance
 export SLURM_CPU_BIND="cores"
 
-# Load necessary modules
-module load conda
-module load cudatoolkit
+# # Load necessary modules
+# module load conda
+# module load cudatoolkit
 
-# Activate the conda environment
-source activate ignn
+# # Activate the conda environment
+# source activate ignn
 
 # Set the PYTHONPATH to include your project directory
 export PYTHONPATH=/sdf/home/t/tiffan/repo/accelerator-surrogate
@@ -41,11 +41,12 @@ echo "Start time: $(date)"
 # Define Variables for Training
 # =============================================================================
 
+BASE_DATA_DIR="/sdf/data/ad/ard/u/tiffan/data/"
+BASE_RESULTS_DIR="/sdf/data/ad/ard/u/tiffan/results/"
+
 MODEL="mgn-ae"
 DATASET="graph_data_filtered_total_charge_51"  # Replace with your actual dataset name
 DATA_KEYWORD="knn_k5_weighted"
-BASE_DATA_DIR="/global/cfs/cdirs/m669/tiffan/data/"
-BASE_RESULTS_DIR="/global/cfs/cdirs/m669/tiffan/results/"
 TASK="predict_n6d"             # Replace with your specific task
 MODE="train"
 NTRAIN=4156
