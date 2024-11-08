@@ -8,21 +8,12 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --gpus=1
 #SBATCH --nodes=1
-#SBATCH --mem-per-cpu=64G
+#SBATCH --mem-per-cpu=16G
 #SBATCH --time=10:00:00
+
 # =============================================================================
 # SLURM Job Configuration for Mesh Graph AutoEncoder (mgn-ae)
 # =============================================================================
-
-# Bind CPUs to cores for optimal performance
-export SLURM_CPU_BIND="cores"
-
-# Load necessary modules
-module load conda
-module load cudatoolkit
-
-# Activate the conda environment
-source activate ignn
 
 # Set the PYTHONPATH to include your project directory
 export PYTHONPATH=/sdf/home/t/tiffan/repo/accelerator-surrogate

@@ -20,7 +20,7 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=8, help="Batch size for training")
     parser.add_argument('--hidden_dim', type=int, default=64, help="Hidden layer dimension size")
     parser.add_argument('--num_layers', type=int, default=3, help="Number of layers in the model")
-    parser.add_argument('--pool_ratios', type=float, nargs='+', default=[0.8], help="Pooling ratios for TopKPooling layers")
+    parser.add_argument('--pool_ratios', type=float, nargs='+', default=[1.0], help="Pooling ratios for TopKPooling layers")
     parser.add_argument('--mode', type=str, default='train', choices=['train', 'evaluate'], help="Mode to run")
     parser.add_argument('--checkpoint', type=str, default=None, help="Path to a checkpoint to resume training")
     parser.add_argument('--checkpoint_epoch', type=int, default=None, help="Epoch of the checkpoint to load")
