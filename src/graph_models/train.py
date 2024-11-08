@@ -108,8 +108,8 @@ if __name__ == "__main__":
         sample = dataset[i]
         if hasattr(sample, 'edge_attr') and sample.edge_attr is not None:
             logging.info(f"Sample {i} edge_attr shape: {sample.edge_attr.shape}")
-            logging.info(f"Sample {i} edge_attr type: {type(sample.edge_attr)}")
-            logging.info(f"Sample {i} edge_attr dtype: {sample.edge_attr.dtype}")
+            # logging.info(f"Sample {i} edge_attr type: {type(sample.edge_attr)}")
+            # logging.info(f"Sample {i} edge_attr dtype: {sample.edge_attr.dtype}")
         else:
             logging.warning(f"Sample {i} is missing edge_attr.")
 
@@ -569,9 +569,7 @@ if __name__ == "__main__":
 
     # Run train or evaluate
     if args.mode == 'train':
-        logging.info("Starting training.")
         trainer.train()
-        logging.info("Training completed.")
     else:
         # Implement evaluation if needed
         logging.info("Evaluation mode is not implemented yet.")
