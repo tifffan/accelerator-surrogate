@@ -1,4 +1,5 @@
-# graph_autoencoders.py
+# models/graph_autoencoders_skip_concat.py
+# In this version of graph_autoencoders.py, skip connections are implemented as concatenation.
 
 import torch
 import torch.nn as nn
@@ -41,11 +42,11 @@ class GraphConvolutionalAutoEncoder(nn.Module):
 
         # Decoder
         for i in range(depth - 1):
-            input_dim = hidden_dim  # Since we're using summation
+            input_dim = hidden_dim * 2  # Due to concatenation
             self.decoder_convs.append(GCNConv(input_dim, hidden_dim))
             self.activations.append(nn.ReLU())
         # Final layer
-        input_dim = hidden_dim
+        input_dim = hidden_dim * 2  # Due to concatenation
         self.decoder_convs.append(GCNConv(input_dim, out_channels))
         self.activations.append(None)
 
@@ -99,8 +100,8 @@ class GraphConvolutionalAutoEncoder(nn.Module):
                 edge_index = edge_indices[idx]
                 batch = batches[idx]
 
-            # Skip connection using summation
-            x = x + x_enc[idx]
+            # Skip connection using concatenation
+            x = torch.cat([x, x_enc[idx]], dim=1)
 
             x = self.decoder_convs[i](x, edge_index)
             act_idx = len(self.encoder_convs) + i
@@ -133,7 +134,7 @@ class GraphAttentionAutoEncoder(nn.Module):
         # Encoder
         self.encoder_convs.append(GATConv(in_channels, hidden_dim // heads, heads=self.heads, concat=True))
         self.activations.append(nn.ELU())
-        hidden_dim_total = hidden_dim  # Total output dimension
+        hidden_dim_total = hidden_dim  # Due to concatenation
 
         for i in range(1, depth):
             # Pooling layer
@@ -146,17 +147,17 @@ class GraphAttentionAutoEncoder(nn.Module):
             # GATConv layer
             self.encoder_convs.append(GATConv(hidden_dim_total, hidden_dim // heads, heads=self.heads, concat=True))
             self.activations.append(nn.ELU())
-            hidden_dim_total = hidden_dim  # Output dimension remains the same
+            hidden_dim_total = hidden_dim  # Due to concatenation
 
         # Decoder
         for i in range(depth - 1):
-            input_dim = hidden_dim_total  # Since we're using summation
+            input_dim = hidden_dim_total * 2  # Due to concatenation
             self.decoder_convs.append(GATConv(input_dim, hidden_dim // heads, heads=self.heads, concat=True))
             self.activations.append(nn.ELU())
-            hidden_dim_total = hidden_dim  # Output dimension remains the same
+            hidden_dim_total = hidden_dim  # Due to concatenation
 
         # Final layer
-        input_dim = hidden_dim_total
+        input_dim = hidden_dim_total * 2  # Due to concatenation
         self.decoder_convs.append(GATConv(input_dim, out_channels, heads=1, concat=False))
         self.activations.append(None)
 
@@ -210,8 +211,8 @@ class GraphAttentionAutoEncoder(nn.Module):
                 edge_index = edge_indices[idx]
                 batch = batches[idx]
 
-            # Skip connection using summation
-            x = x + x_enc[idx]
+            # Skip connection using concatenation
+            x = torch.cat([x, x_enc[idx]], dim=1)
 
             x = self.decoder_convs[i](x, edge_index)
             act_idx = len(self.encoder_convs) + i
@@ -300,7 +301,7 @@ class GraphTransformerAutoEncoder(nn.Module):
 
         # Decoder
         for i in range(depth - 1):
-            input_dim = conv_out_dim  # Since we're using summation
+            input_dim = conv_out_dim * 2  # Due to concatenation
             self.decoder_convs.append(
                 TransformerConv(
                     input_dim,
@@ -318,7 +319,7 @@ class GraphTransformerAutoEncoder(nn.Module):
             self.activations.append(nn.ReLU())
 
         # Final layer
-        input_dim = conv_out_dim
+        input_dim = conv_out_dim * 2  # Due to concatenation
         self.decoder_convs.append(
             TransformerConv(
                 input_dim,
@@ -398,8 +399,8 @@ class GraphTransformerAutoEncoder(nn.Module):
                 edge_attr = edge_attrs[idx]
                 batch = batches[idx]
 
-            # Skip connection using summation
-            x = x + x_enc[idx]
+            # Skip connection using concatenation
+            x = torch.cat([x, x_enc[idx]], dim=1)
 
             x = self.decoder_convs[i](x, edge_index, edge_attr)
             if self.bns[act_idx] is not None:
@@ -550,7 +551,7 @@ class MeshGraphAutoEncoder(nn.Module):
         # Decoder
         self.decoder_processor = nn.ModuleList()
         for i in range(depth):
-            input_dim = hidden_dim  # Since we're using summation
+            input_dim = hidden_dim * 2  # Due to concatenation
             edge_model = EdgeModel(
                 edge_in_dim=hidden_dim,
                 node_in_dim=input_dim,
@@ -632,8 +633,8 @@ class MeshGraphAutoEncoder(nn.Module):
                 edge_attr = edge_attrs[idx]
                 batch = batches[idx]
 
-            # Skip connection using summation
-            x = x + x_enc[idx]
+            # Skip connection using concatenation
+            x = torch.cat([x, x_enc[idx]], dim=1)
 
             x, edge_attr, _ = self.decoder_processor[i](x, edge_index, edge_attr, u=None, batch=batch)
 
