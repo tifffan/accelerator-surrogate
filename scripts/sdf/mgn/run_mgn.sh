@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --account=ad:beamphysics
 #SBATCH --partition=ampere
-#SBATCH --job-name=multiscale
-#SBATCH --output=logs/train_multiscale_%j.out
-#SBATCH --error=logs/train_multiscale_%j.err
+#SBATCH --job-name=mgn
+#SBATCH --output=logs/train_mgn_%j.out
+#SBATCH --error=logs/train_mgn_%j.err
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --gpus=1
@@ -11,7 +11,7 @@
 #SBATCH --mem-per-cpu=16G
 #SBATCH --time=10:00:00
 # =============================================================================
-# SLURM Job Configuration for Multiscale GNN (multiscale)
+# SLURM Job Configuration for Mesh Graph AutoEncoder (mgn-ae)
 # =============================================================================
 
 # Bind CPUs to cores for optimal performance
@@ -44,21 +44,16 @@ echo "Start time: $(date)"
 BASE_DATA_DIR="/sdf/data/ad/ard/u/tiffan/data/"
 BASE_RESULTS_DIR="/sdf/data/ad/ard/u/tiffan/results/"
 
-MODEL="multiscale"
+MODEL="mgn"
 DATASET="graph_data_filtered_total_charge_51"  # Replace with your actual dataset name
 DATA_KEYWORD="knn_k5_weighted"
 TASK="predict_n6d"             # Replace with your specific task
 MODE="train"
 NTRAIN=4156
-BATCH_SIZE=16
+BATCH_SIZE=32
 NEPOCHS=1000
 HIDDEN_DIM=256
-NUM_LAYERS=4                   # Must be even for autoencoders (encoder + decoder)
-
-# Multiscale-specific parameters
-MULTISCALE_N_MLP_HIDDEN_LAYERS=2
-MULTISCALE_N_MMP_LAYERS=2
-MULTISCALE_N_MESSAGE_PASSING_LAYERS=1
+NUM_LAYERS=6                   # Must be even for autoencoders (encoder + decoder)
 
 # =============================================================================
 # Construct the Python Command with All Required Arguments
@@ -76,10 +71,7 @@ python_command="python src/graph_models/train.py \
     --batch_size $BATCH_SIZE \
     --nepochs $NEPOCHS \
     --hidden_dim $HIDDEN_DIM \
-    --num_layers $NUM_LAYERS \
-    --multiscale_n_mlp_hidden_layers $MULTISCALE_N_MLP_HIDDEN_LAYERS \
-    --multiscale_n_mmp_layers $MULTISCALE_N_MMP_LAYERS \
-    --multiscale_n_message_passing_layers $MULTISCALE_N_MESSAGE_PASSING_LAYERS"
+    --num_layers $NUM_LAYERS"
 
 # =============================================================================
 # Execute the Training

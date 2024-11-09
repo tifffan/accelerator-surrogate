@@ -10,6 +10,9 @@ def parse_args():
     parser.add_argument('--data_keyword', type=str, required=True, help="Common keyword to infer data directories")
     parser.add_argument('--base_data_dir', type=str, default="/sdf/data/ad/ard/u/tiffan/data/",
                         help="Base directory where the data is stored")
+    parser.add_argument('--base_results_dir', type=str, default="/sdf/data/ad/ard/u/tiffan/results/",
+                        help="Base directory where the results are stored.")
+
     parser.add_argument('--dataset', type=str, required=True, help="Dataset identifier")
     parser.add_argument('--task', type=str, required=True, choices=['predict_n6d', 'predict_n4d', 'predict_n2d'],
                         help="Task to perform")
@@ -36,14 +39,10 @@ def parse_args():
     parser.add_argument('--exp_decay_rate', type=float, default=0.001, help="Decay rate for exponential scheduler")
     parser.add_argument('--exp_start_epoch', type=int, default=0, help="Start epoch for exponential scheduler")
     # Linear Scheduler Parameters
-    parser.add_argument('--lin_start_epoch', type=int, default=10, help="Start epoch for linear scheduler")
-    parser.add_argument('--lin_end_epoch', type=int, default=100, help="End epoch for linear scheduler")
-    parser.add_argument('--lin_final_lr', type=float, default=1e-6, help="Final learning rate for linear scheduler")
-
-    # Base results directory
-    parser.add_argument('--base_results_dir', type=str, default="/sdf/data/ad/ard/u/tiffan/results/",
-                        help="Base directory where the results are stored.")
-
+    parser.add_argument('--lin_start_epoch', type=int, default=100, help="Start epoch for linear scheduler")
+    parser.add_argument('--lin_end_epoch', type=int, default=1000, help="End epoch for linear scheduler")
+    parser.add_argument('--lin_final_lr', type=float, default=1e-5, help="Final learning rate for linear scheduler")
+    
     # GAT-specific arguments
     parser.add_argument('--gat_heads', type=int, default=1, help="Number of attention heads for GAT layers")
 
