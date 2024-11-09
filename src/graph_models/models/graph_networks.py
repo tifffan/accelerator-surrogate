@@ -1,4 +1,4 @@
-# graph_networks.py
+# models/graph_networks.py
 
 import torch
 import torch.nn as nn
