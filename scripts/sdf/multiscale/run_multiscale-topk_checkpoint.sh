@@ -62,7 +62,7 @@ MULTISCALE_N_MMP_LAYERS=1         # Number of layers in the Multiscale Message P
 MULTISCALE_N_MESSAGE_PASSING_LAYERS=2  # Number of message passing layers in the Multiscale GNN
 
 # Checkpoint path
-CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/multiscale-topk/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b32_lr0.0001_h128_ly4_pr0.80_ep1000_mlph0_mmply1_mply2/checkpoints/model-999.pth"
+CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/multiscale-topk/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b32_lr0.0001_h128_ly4_pr0.80_ep2000_mlph0_mmply1_mply2/checkpoints/model-1779.pth"
 
 # =============================================================================
 # Construct the Python Command with All Required Arguments

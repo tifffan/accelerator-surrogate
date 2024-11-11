@@ -10,7 +10,6 @@
 #SBATCH --nodes=1
 #SBATCH --mem-per-cpu=16G
 #SBATCH --time=10:00:00
-#SBATCH --qos=normal
 
 # =============================================================================
 # SLURM Job Configuration for Multiscale GNN (multiscale)
@@ -53,8 +52,8 @@ TASK="predict_n6d"             # Replace with your specific task
 MODE="train"
 NTRAIN=4156
 BATCH_SIZE=16
-NEPOCHS=1000
-HIDDEN_DIM=256
+NEPOCHS=3000
+HIDDEN_DIM=128
 NUM_LAYERS=4                   # Must be even for autoencoders (encoder + decoder)
 
 # Multiscale-specific parameters
@@ -62,8 +61,18 @@ MULTISCALE_N_MLP_HIDDEN_LAYERS=2
 MULTISCALE_N_MMP_LAYERS=2
 MULTISCALE_N_MESSAGE_PASSING_LAYERS=1
 
+# Learning rate scheduler parameters
+LR=1e-4
+LR_SCHEDULER="lin"
+LIN_START_EPOCH=100
+LIN_END_EPOCH=1000
+LIN_FINAL_LR=1e-5
+
+# Set a random seed for reproducibility
+RANDOM_SEED=63
+
 # Checkpoint path
-CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/multiscale/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b16_lr0.0001_h256_ly4_pr1.00_ep1000_mlph2_mmply2_mply1/checkpoints/model-359.pth"
+CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/multiscale/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b16_lr0.0001_h128_ly4_pr1.00_ep2000_sch_lin_100_1000_1e-05_mlph2_mmply2_mply1/checkpoints/model-1999.pth"
 
 # =============================================================================
 # Construct the Python Command with All Required Arguments
@@ -85,6 +94,12 @@ python_command="python src/graph_models/train.py \
     --multiscale_n_mlp_hidden_layers $MULTISCALE_N_MLP_HIDDEN_LAYERS \
     --multiscale_n_mmp_layers $MULTISCALE_N_MMP_LAYERS \
     --multiscale_n_message_passing_layers $MULTISCALE_N_MESSAGE_PASSING_LAYERS
+    --lr $LR \
+    --lr_scheduler $LR_SCHEDULER \
+    --lin_start_epoch $LIN_START_EPOCH \
+    --lin_end_epoch $LIN_END_EPOCH \
+    --lin_final_lr $LIN_FINAL_LR \
+    --random_seed $RANDOM_SEED \
     --checkpoint $CHECKPOINT"
 
 # =============================================================================
