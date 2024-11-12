@@ -4,7 +4,7 @@
 #SBATCH -q regular
 #SBATCH -t 19:30:00
 #SBATCH -n 1
-#SBATCH -c 64
+#SBATCH -c 16
 #SBATCH --gpus-per-task=1
 #SBATCH --output=logs/train_mgn_ae_%j.out
 #SBATCH --error=logs/train_mgn_ae_%j.err
