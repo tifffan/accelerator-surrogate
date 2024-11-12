@@ -72,15 +72,19 @@ def custom_evaluate_impact_with_distgen(
     ######## edit impact to insert intermediate steps
     
     # Make a list of s
-    for s in np.linspace(0.001, 0.078, 78):
-        print("Adding s value:", s)
+    s_stop = 0.942 #0.942084
+    s_values = np.linspace(0, s_stop, 76)[1:-1]
+    
+    for s in s_values:
+        # print("Adding s value:", s)
         ele = new_write_beam(
             s=s, ref_eles=I.lattice
         )  # ref_eles will ensure that there are no naming conflicts
         I.add_ele(ele)    
-        
-    # I.workdir = "/lscratch/tiffan/"
-    # I.configure()
+    
+    # Print the s values
+    print("s values added to the lattice:")
+    print(s_values)
     
     ####### end of edit
     
