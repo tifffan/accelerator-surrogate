@@ -2,12 +2,16 @@
 #SBATCH -A m669
 #SBATCH -C gpu
 #SBATCH -q regular
-#SBATCH -t 3:50:00
+#SBATCH -t 23:30:00
 #SBATCH -n 1
-#SBATCH -c 64
+#SBATCH -c 16
 #SBATCH --gpus-per-task=1
-#SBATCH --output=logs/train_meshgraphnet_%j.out
-#SBATCH --error=logs/train_meshgraphnet_%j.err
+#SBATCH --output=logs/train_mgn_ae_%j.out
+#SBATCH --error=logs/train_mgn_ae_%j.err
+
+# =============================================================================
+# SLURM Job Configuration for Mesh Graph AutoEncoder (mgn-ae)
+# =============================================================================
 
 # Bind CPUs to cores for optimal performance
 export SLURM_CPU_BIND="cores"
@@ -32,22 +36,27 @@ cd /global/homes/t/tiffan/repo/accelerator-surrogate
 start_time=$(date +%s)
 echo "Start time: $(date)"
 
-# Define variables for clarity and easy modification
-MODEL="meshgraphnet"
+# =============================================================================
+# Define Variables for Training
+# =============================================================================
+
+MODEL="mgn-ae"
 DATASET="graph_data_filtered_total_charge_51"  # Replace with your actual dataset name
 DATA_KEYWORD="knn_k5_weighted"
-BASE_DATA_DIR="/pscratch/sd/t/tiffan/data/"
-BASE_RESULTS_DIR="/pscratch/sd/t/tiffan/results/"
-TASK="predict_n6d"             # Replace with your task, e.g., "predict_n6d"
+BASE_DATA_DIR="/global/cfs/cdirs/m669/tiffan/data/"
+BASE_RESULTS_DIR="/global/cfs/cdirs/m669/tiffan/results/"
+TASK="predict_n6d"             # Replace with your specific task
 MODE="train"
-NTRAIN=128
-BATCH_SIZE=4
-NEPOCHS=200
-HIDDEN_DIM=32
-NUM_LAYERS=4
-POOL_RATIOS="1.0 1.0"          # Two pooling ratios for 4 layers (num_layers - 2)
+NTRAIN=4156
+BATCH_SIZE=32
+NEPOCHS=1000
+HIDDEN_DIM=256
+NUM_LAYERS=6                   # Must be even for autoencoders (encoder + decoder)
 
-# Construct the Python command with all required arguments
+# =============================================================================
+# Construct the Python Command with All Required Arguments
+# =============================================================================
+
 python_command="python src/graph_models/train.py \
     --model $MODEL \
     --dataset $DATASET \
@@ -60,14 +69,21 @@ python_command="python src/graph_models/train.py \
     --batch_size $BATCH_SIZE \
     --nepochs $NEPOCHS \
     --hidden_dim $HIDDEN_DIM \
-    --num_layers $NUM_LAYERS \
-    --pool_ratios $POOL_RATIOS"
+    --num_layers $NUM_LAYERS"
+
+# =============================================================================
+# Execute the Training
+# =============================================================================
 
 # Print the Python command for verification
 echo "Running command: $python_command"
 
 # Execute the Python training script
 $python_command
+
+# =============================================================================
+# Record and Display the Duration
+# =============================================================================
 
 # Record the end time
 end_time=$(date +%s)
