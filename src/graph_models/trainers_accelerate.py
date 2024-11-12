@@ -119,20 +119,23 @@ class BaseTrainer:
             if self.scheduler:
                 self.scheduler.step()
                 current_lr = self.optimizer.param_groups[0]['lr']
-                logging.info(f"Epoch {epoch+1}: Learning rate adjusted to {current_lr}")
+                if self.verbose:
+                    logging.info(f"Epoch {epoch+1}: Learning rate adjusted to {current_lr}")
 
             # Save loss history
             avg_loss = total_loss / len(self.dataloader)
             self.loss_history.append(avg_loss)
-            logging.info(f'Epoch {epoch+1}/{self.nepochs}, Loss: {avg_loss:.4e}')
+            if self.accelerator.is_main_process:
+                logging.info(f'Epoch {epoch+1}/{self.nepochs}, Loss: {avg_loss:.4e}')
 
             # Save checkpoint
             if (epoch + 1) % self.save_checkpoint_every == 0 or (epoch + 1) == self.nepochs:
                 self.save_checkpoint(epoch)
 
         # Plot loss convergence
-        self.plot_loss_convergence()
-        logging.info("Training complete!")
+        if self.accelerator.is_main_process:
+            self.plot_loss_convergence()
+            logging.info("Training complete!")
 
     def train_step(self, data):
         raise NotImplementedError("Subclasses should implement this method.")
@@ -183,14 +186,21 @@ class BaseTrainer:
             plt.savefig(self.results_folder / "loss_convergence.png")
             plt.close()
 
-class GraphPredictionTrainer(BaseTrainer):        
+class GraphPredictionTrainer(BaseTrainer):
     def __init__(self, criterion=None, **kwargs):
+        # Pop out values from kwargs to prevent duplication
         model = kwargs.pop('model', None)
-        super().__init__(model=model, 
-                         dataloader=kwargs['dataloader'],
-                         optimizer=kwargs['optimizer'],
-                         scheduler=kwargs.get('scheduler', None),
-                         device=kwargs.get('device', 'cpu'),
+        dataloader = kwargs.pop('dataloader', None)
+        optimizer = kwargs.pop('optimizer', None)
+        scheduler = kwargs.pop('scheduler', None)
+        device = kwargs.pop('device', 'cpu')
+        
+        # Pass the remaining kwargs to the parent class
+        super().__init__(model=model,
+                         dataloader=dataloader,
+                         optimizer=optimizer,
+                         scheduler=scheduler,
+                         device=device,
                          **kwargs)
         
         # Set the loss function
@@ -203,12 +213,12 @@ class GraphPredictionTrainer(BaseTrainer):
         logging.info(f"Using loss function: {self.criterion.__class__.__name__}")
 
     def train_step(self, data):
-        # Check edge_attr
-        if not hasattr(data, 'edge_attr') or data.edge_attr is None:
-            logging.error("data.edge_attr is missing or None.")
-            raise ValueError("data.edge_attr is missing or None.")
-        else:
-            logging.info(f"data.edge_attr shape: {data.edge_attr.shape}")
+        # # Check edge_attr
+        # if not hasattr(data, 'edge_attr') or data.edge_attr is None:
+        #     logging.error("data.edge_attr is missing or None.")
+        #     raise ValueError("data.edge_attr is missing or None.")
+        # else:
+        #     logging.info(f"data.edge_attr shape: {data.edge_attr.shape}")
         
         x_pred = self.model_forward(data)
         loss = self.criterion(x_pred, data.y)
@@ -245,7 +255,6 @@ class GraphPredictionTrainer(BaseTrainer):
             )
         elif model_type in ['MeshGraphNet', 'MeshGraphAutoEncoder']:
             # MeshGraphNet and MeshGraphAutoEncoder use edge attributes
-            logging.info("MeshGraphNet or MeshGraphAutoEncoder recognized!")
             x_pred = self.model(
                 x=data.x,
                 edge_index=data.edge_index,
@@ -259,7 +268,7 @@ class GraphPredictionTrainer(BaseTrainer):
                 edge_attr=data.edge_attr if hasattr(data, 'edge_attr') else None,
                 batch=data.batch
             )
-        else:  # GraphConvolutionNetwork, GraphAttentionNetwork, etc.
+        else:  # GraphConvolutionNetwork, GraphAttentionNetwork, etc. TODO: Add specific model types here
             x_pred = self.model(
                 x=data.x,
                 edge_index=data.edge_index,

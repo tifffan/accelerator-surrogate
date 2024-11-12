@@ -1,14 +1,14 @@
 #!/bin/bash
 #SBATCH -A m669
 #SBATCH -C gpu
-#SBATCH -q debug
-#SBATCH -t 0:30:00
-#SBATCH --nodes=2
+#SBATCH -q regular
+#SBATCH -t 13:30:00
+#SBATCH --nodes=16
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
 #SBATCH --cpus-per-task=128
-#SBATCH --output=logs/train_mgn_%j.out
-#SBATCH --error=logs/train_mgn_%j.err
+#SBATCH --output=logs/run_mgn_accelerate_%j.out
+#SBATCH --error=logs/run_mgn_accelerate_%j.err
 
 # =============================================================================
 # SLURM Job Configuration for Mesh Graph Net (mgn)
@@ -20,6 +20,7 @@ export SLURM_CPU_BIND="cores"
 # Load necessary modules
 module load conda
 module load cudatoolkit
+module load pytorch/2.3.1
 
 # Activate the conda environment
 source activate ignn
@@ -52,9 +53,19 @@ TASK="predict_n6d"             # Replace with your specific task
 MODE="train"
 NTRAIN=4156
 BATCH_SIZE=32
-NEPOCHS=10
+NEPOCHS=2000
 HIDDEN_DIM=256
 NUM_LAYERS=6                   # Must be even for autoencoders (encoder + decoder)
+
+# Learning rate scheduler parameters
+LR=1e-4
+LR_SCHEDULER="lin"
+LIN_START_EPOCH=100
+LIN_END_EPOCH=1000
+LIN_FINAL_LR=1e-6
+
+# Random seed for reproducibility
+RANDOM_SEED=63
 
 # =============================================================================
 # Construct the Command with All Required Arguments
@@ -72,7 +83,13 @@ python_command="src/graph_models/train_accelerate.py \
     --batch_size $BATCH_SIZE \
     --nepochs $NEPOCHS \
     --hidden_dim $HIDDEN_DIM \
-    --num_layers $NUM_LAYERS"
+    --num_layers $NUM_LAYERS \
+    --lr $LR \
+    --lr_scheduler $LR_SCHEDULER \
+    --lin_start_epoch $LIN_START_EPOCH \
+    --lin_end_epoch $LIN_END_EPOCH \
+    --lin_final_lr $LIN_FINAL_LR \
+    --random_seed $RANDOM_SEED"
 
 # =============================================================================
 # Execute the Training with Accelerate
@@ -84,7 +101,7 @@ echo "Running command: $python_command"
 # Set master address and port for distributed training
 export MASTER_ADDR=$(hostname)
 export MASTER_PORT=29500  # You can choose any free port
-export OMP_NUM_THREADS=8  # Adjust as needed
+export OMP_NUM_THREADS=64  # Adjust as needed
 
 # Use accelerate launch with srun
 srun -l bash -c "

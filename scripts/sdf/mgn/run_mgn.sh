@@ -81,7 +81,7 @@ python_command="python src/graph_models/train.py \
     --batch_size $BATCH_SIZE \
     --nepochs $NEPOCHS \
     --hidden_dim $HIDDEN_DIM \
-    --num_layers $NUM_LAYERS
+    --num_layers $NUM_LAYERS \
     --lr $LR \
     --lr_scheduler $LR_SCHEDULER \
     --lin_start_epoch $LIN_START_EPOCH \
