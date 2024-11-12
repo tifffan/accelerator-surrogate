@@ -72,7 +72,8 @@ LIN_FINAL_LR=1e-5
 RANDOM_SEED=63
 
 # Checkpoint path
-CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/multiscale/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b16_lr0.0001_h128_ly4_pr1.00_ep2000_sch_lin_100_1000_1e-05_mlph2_mmply2_mply1/checkpoints/model-1999.pth"
+CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/multiscale/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b16_lr0.0001_h128_ly4_pr1.00_ep3000_sch_lin_100_1000_1e-05_mlph2_mmply2_mply1/checkpoints/model-2719.pth"
+# CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/multiscale/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b16_lr0.0001_h128_ly4_pr1.00_ep2000_sch_lin_100_1000_1e-05_mlph2_mmply2_mply1/checkpoints/model-1999.pth"
 
 # =============================================================================
 # Construct the Python Command with All Required Arguments

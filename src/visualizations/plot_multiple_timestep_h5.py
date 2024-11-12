@@ -233,8 +233,7 @@ def plot_particle_motion(h5_file_path, step_size=1, subsample_size=50, output_di
 
 # Usage example
 if __name__ == "__main__":
-    # h5_file_path = 'beam_dump_CSR_0.1.h5'  # Path to your HDF5 file
-    archive_dir = '/sdf/data/ad/ard/u/tiffan/Archive_4'
+    archive_dir = '/sdf/data/ad/ard/u/tiffan/Archive_4'  # Do not include the last '/'
     # Search for HDF5 files in the archive directory
     h5_files = glob.glob(os.path.join(archive_dir, '*.h5'))
 
@@ -244,8 +243,8 @@ if __name__ == "__main__":
     else:
         raise FileNotFoundError(f"No HDF5 files found in directory: {archive_dir}")
     
-    output_dir = f'figures/{os.path.basename(archive_dir)}{os.path.basename(h5_file_path).replace(".h5", "")}/'
+    output_dir = f'figures/{os.path.basename(archive_dir)}/{os.path.basename(h5_file_path).replace(".h5", "")}/'
     subsample_size = 50  # Subsample size for particles
 
     for step_size in [1, 2, 5, 10]:
-        plot_particle_motion(h5_file_path, step_size=step_size, output_dir=output_dir, subsample_size=subsample_size, max_iterations=10)
+        plot_particle_motion(h5_file_path, step_size=step_size, output_dir=output_dir, subsample_size=subsample_size, max_iterations=100)
