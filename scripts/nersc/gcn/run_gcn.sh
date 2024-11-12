@@ -2,13 +2,13 @@
 #SBATCH -A m669
 #SBATCH -C gpu
 #SBATCH -q regular
-#SBATCH -t 5:30:00
+#SBATCH -t 4:30:00
 #SBATCH --nodes=2
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
 #SBATCH --cpus-per-task=128
-#SBATCH --output=logs/test_accelerate_%j.out
-#SBATCH --error=logs/test_accelerate_%j.err
+#SBATCH --output=logs/run_gcn_accelerate_%j.out
+#SBATCH --error=logs/run_gcn_accelerate_%j.err
 
 # Bind CPUs to cores for optimal performance
 export SLURM_CPU_BIND="cores"
@@ -16,6 +16,7 @@ export SLURM_CPU_BIND="cores"
 # Load necessary modules
 module load conda
 module load cudatoolkit
+module load pytorch/2.3.1
 
 # Activate the conda environment
 source activate ignn

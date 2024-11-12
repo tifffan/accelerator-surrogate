@@ -104,7 +104,7 @@ if __name__ == "__main__":
         dataset = Subset(dataset, indices)
         
     # After initializing the dataset and subset
-    for i in range(min(5, len(dataset))):
+    for i in range(min(1, len(dataset))):
         sample = dataset[i]
         if hasattr(sample, 'edge_attr') and sample.edge_attr is not None:
             logging.info(f"Sample {i} edge_attr shape: {sample.edge_attr.shape}")
