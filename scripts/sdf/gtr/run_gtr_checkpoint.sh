@@ -46,8 +46,9 @@ GTR_HEADS=4
 GTR_CONCAT=True
 GTR_DROPOUT=0.1
 
-CHECKPOINT=None
-# CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/gtr/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b32_lr0.0001_h256_ly6_pr1.00_ep2000_sch_lin_100_1000_1e-05/checkpoints/model-1909.pth"
+# CHECKPOINT=None
+CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/gtr/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b32_lr0.0001_h256_ly6_pr1.00_ep2000_sch_lin_100_1000_1e-05_heads4_concatTrue_dropout0.1/checkpoints/model-249.pth"
+
 RANDOM_SEED=63
 
 python_command="python src/graph_models/train.py \
