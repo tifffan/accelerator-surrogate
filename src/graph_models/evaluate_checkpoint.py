@@ -509,373 +509,373 @@
 #     # You may need to define a function to initialize the model based on hyperparameters
 
 #     # Here, we'll define a function to initialize the model
-#     def initialize_model(hyperparams, sample):
-#         model_name = hyperparams['model'].lower()
+    # def initialize_model(hyperparams, sample):
+    #     model_name = hyperparams['model'].lower()
 
-#         def is_autoencoder_model(model_name):
-#             return model_name.lower().endswith('-ae') or model_name.lower() in ['multiscale-topk']
+    #     def is_autoencoder_model(model_name):
+    #         return model_name.lower().endswith('-ae') or model_name.lower() in ['multiscale-topk']
 
-#         if is_autoencoder_model(model_name):
-#             # Autoencoder models
-#             num_layers = hyperparams['num_layers']
-#             if num_layers % 2 != 0:
-#                 raise ValueError(f"For autoencoder models, 'num_layers' must be an even number. Received: {num_layers}")
-#             depth = num_layers // 2
-#             logging.info(f"Autoencoder selected. Using depth: {depth} (num_layers: {num_layers})")
-#             required_pool_ratios = depth - 1
-#             pool_ratios = hyperparams.get('pool_ratios', [])
-#             current_pool_ratios = len(pool_ratios)
+    #     if is_autoencoder_model(model_name):
+    #         # Autoencoder models
+    #         num_layers = hyperparams['num_layers']
+    #         if num_layers % 2 != 0:
+    #             raise ValueError(f"For autoencoder models, 'num_layers' must be an even number. Received: {num_layers}")
+    #         depth = num_layers // 2
+    #         logging.info(f"Autoencoder selected. Using depth: {depth} (num_layers: {num_layers})")
+    #         required_pool_ratios = depth - 1
+    #         pool_ratios = hyperparams.get('pool_ratios', [])
+    #         current_pool_ratios = len(pool_ratios)
 
-#             if required_pool_ratios <= 0:
-#                 pool_ratios = []
-#                 logging.info(f"No pooling layers required for depth {depth}.")
-#             elif current_pool_ratios < required_pool_ratios:
-#                 pool_ratios += [1.0] * (required_pool_ratios - current_pool_ratios)
-#                 logging.warning(f"Pool ratios were padded with 1.0 to match required_pool_ratios: {required_pool_ratios}")
-#             elif current_pool_ratios > required_pool_ratios:
-#                 pool_ratios = pool_ratios[:required_pool_ratios]
-#                 logging.warning(f"Pool ratios were trimmed to match required_pool_ratios: {required_pool_ratios}")
+    #         if required_pool_ratios <= 0:
+    #             pool_ratios = []
+    #             logging.info(f"No pooling layers required for depth {depth}.")
+    #         elif current_pool_ratios < required_pool_ratios:
+    #             pool_ratios += [1.0] * (required_pool_ratios - current_pool_ratios)
+    #             logging.warning(f"Pool ratios were padded with 1.0 to match required_pool_ratios: {required_pool_ratios}")
+    #         elif current_pool_ratios > required_pool_ratios:
+    #             pool_ratios = pool_ratios[:required_pool_ratios]
+    #             logging.warning(f"Pool ratios were trimmed to match required_pool_ratios: {required_pool_ratios}")
 
-#             if model_name == 'gcn-ae':
-#                 in_channels = sample.x.shape[1]
-#                 hidden_dim = hyperparams['hidden_dim']
-#                 out_channels = sample.y.shape[1]
+    #         if model_name == 'gcn-ae':
+    #             in_channels = sample.x.shape[1]
+    #             hidden_dim = hyperparams['hidden_dim']
+    #             out_channels = sample.y.shape[1]
 
-#                 model = GraphConvolutionalAutoEncoder(
-#                     in_channels=in_channels,
-#                     hidden_dim=hidden_dim,
-#                     out_channels=out_channels,
-#                     depth=depth,
-#                     pool_ratios=pool_ratios
-#                 )
-#                 logging.info("Initialized GraphConvolutionalAutoEncoder.")
+    #             model = GraphConvolutionalAutoEncoder(
+    #                 in_channels=in_channels,
+    #                 hidden_dim=hidden_dim,
+    #                 out_channels=out_channels,
+    #                 depth=depth,
+    #                 pool_ratios=pool_ratios
+    #             )
+    #             logging.info("Initialized GraphConvolutionalAutoEncoder.")
 
-#             elif model_name == 'gat-ae':
-#                 in_channels = sample.x.shape[1]
-#                 hidden_dim = hyperparams['hidden_dim']
-#                 out_channels = sample.y.shape[1]
-#                 heads = hyperparams.get('gat_heads', 1)
+    #         elif model_name == 'gat-ae':
+    #             in_channels = sample.x.shape[1]
+    #             hidden_dim = hyperparams['hidden_dim']
+    #             out_channels = sample.y.shape[1]
+    #             heads = hyperparams.get('gat_heads', 1)
 
-#                 model = GraphAttentionAutoEncoder(
-#                     in_channels=in_channels,
-#                     hidden_dim=hidden_dim,
-#                     out_channels=out_channels,
-#                     depth=depth,
-#                     pool_ratios=pool_ratios,
-#                     heads=heads
-#                 )
-#                 logging.info("Initialized GraphAttentionAutoEncoder.")
+    #             model = GraphAttentionAutoEncoder(
+    #                 in_channels=in_channels,
+    #                 hidden_dim=hidden_dim,
+    #                 out_channels=out_channels,
+    #                 depth=depth,
+    #                 pool_ratios=pool_ratios,
+    #                 heads=heads
+    #             )
+    #             logging.info("Initialized GraphAttentionAutoEncoder.")
 
-#             elif model_name == 'gtr-ae':
-#                 in_channels = sample.x.shape[1]
-#                 hidden_dim = hyperparams['hidden_dim']
-#                 out_channels = sample.y.shape[1]
-#                 num_heads = hyperparams.get('gtr_heads', 4)
-#                 concat = hyperparams.get('gtr_concat', True)
-#                 dropout = hyperparams.get('gtr_dropout', 0.0)
-#                 edge_dim = sample.edge_attr.shape[1] if sample.edge_attr is not None else None
+    #         elif model_name == 'gtr-ae':
+    #             in_channels = sample.x.shape[1]
+    #             hidden_dim = hyperparams['hidden_dim']
+    #             out_channels = sample.y.shape[1]
+    #             num_heads = hyperparams.get('gtr_heads', 4)
+    #             concat = hyperparams.get('gtr_concat', True)
+    #             dropout = hyperparams.get('gtr_dropout', 0.0)
+    #             edge_dim = sample.edge_attr.shape[1] if sample.edge_attr is not None else None
 
-#                 model = GraphTransformerAutoEncoder(
-#                     in_channels=in_channels,
-#                     hidden_dim=hidden_dim,
-#                     out_channels=out_channels,
-#                     depth=depth,
-#                     pool_ratios=pool_ratios,
-#                     num_heads=num_heads,
-#                     concat=concat,
-#                     dropout=dropout,
-#                     edge_dim=edge_dim
-#                 )
-#                 logging.info("Initialized GraphTransformerAutoEncoder.")
+    #             model = GraphTransformerAutoEncoder(
+    #                 in_channels=in_channels,
+    #                 hidden_dim=hidden_dim,
+    #                 out_channels=out_channels,
+    #                 depth=depth,
+    #                 pool_ratios=pool_ratios,
+    #                 num_heads=num_heads,
+    #                 concat=concat,
+    #                 dropout=dropout,
+    #                 edge_dim=edge_dim
+    #             )
+    #             logging.info("Initialized GraphTransformerAutoEncoder.")
 
-#             elif model_name == 'mgn-ae':
-#                 node_in_dim = sample.x.shape[1]
-#                 edge_in_dim = sample.edge_attr.shape[1] if sample.edge_attr is not None else 0
-#                 node_out_dim = sample.y.shape[1]
-#                 hidden_dim = hyperparams['hidden_dim']
+    #         elif model_name == 'mgn-ae':
+    #             node_in_dim = sample.x.shape[1]
+    #             edge_in_dim = sample.edge_attr.shape[1] if sample.edge_attr is not None else 0
+    #             node_out_dim = sample.y.shape[1]
+    #             hidden_dim = hyperparams['hidden_dim']
 
-#                 model = MeshGraphAutoEncoder(
-#                     node_in_dim=node_in_dim,
-#                     edge_in_dim=edge_in_dim,
-#                     node_out_dim=node_out_dim,
-#                     hidden_dim=hidden_dim,
-#                     depth=depth,
-#                     pool_ratios=pool_ratios
-#                 )
-#                 logging.info("Initialized MeshGraphAutoEncoder.")
+    #             model = MeshGraphAutoEncoder(
+    #                 node_in_dim=node_in_dim,
+    #                 edge_in_dim=edge_in_dim,
+    #                 node_out_dim=node_out_dim,
+    #                 hidden_dim=hidden_dim,
+    #                 depth=depth,
+    #                 pool_ratios=pool_ratios
+    #             )
+    #             logging.info("Initialized MeshGraphAutoEncoder.")
 
-#             elif model_name == 'multiscale-topk':
-#                 input_node_channels = sample.x.shape[1]
-#                 input_edge_channels = sample.edge_attr.shape[1] if sample.edge_attr is not None else 0
-#                 hidden_channels = hyperparams['hidden_dim']
-#                 output_node_channels = sample.y.shape[1]
-#                 n_mlp_hidden_layers = hyperparams.get('multiscale_n_mlp_hidden_layers', 2)
-#                 n_mmp_layers = hyperparams.get('multiscale_n_mmp_layers', 4)
-#                 n_messagePassing_layers = hyperparams.get('multiscale_n_message_passing_layers', 2)
-#                 max_level_mmp = num_layers // 2 - 1
-#                 max_level_topk = num_layers // 2 - 1
+    #         elif model_name == 'multiscale-topk':
+    #             input_node_channels = sample.x.shape[1]
+    #             input_edge_channels = sample.edge_attr.shape[1] if sample.edge_attr is not None else 0
+    #             hidden_channels = hyperparams['hidden_dim']
+    #             output_node_channels = sample.y.shape[1]
+    #             n_mlp_hidden_layers = hyperparams.get('multiscale_n_mlp_hidden_layers', 2)
+    #             n_mmp_layers = hyperparams.get('multiscale_n_mmp_layers', 4)
+    #             n_messagePassing_layers = hyperparams.get('multiscale_n_message_passing_layers', 2)
+    #             max_level_mmp = num_layers // 2 - 1
+    #             max_level_topk = num_layers // 2 - 1
 
-#                 # Compute l_char (characteristic length scale)
-#                 edge_index = sample.edge_index
-#                 pos = sample.pos
-#                 edge_lengths = torch.norm(pos[edge_index[0]] - pos[edge_index[1]], dim=1)
-#                 l_char = edge_lengths.mean().item()
-#                 logging.info(f"Computed l_char (characteristic length scale): {l_char}")
+    #             # Compute l_char (characteristic length scale)
+    #             edge_index = sample.edge_index
+    #             pos = sample.pos
+    #             edge_lengths = torch.norm(pos[edge_index[0]] - pos[edge_index[1]], dim=1)
+    #             l_char = edge_lengths.mean().item()
+    #             logging.info(f"Computed l_char (characteristic length scale): {l_char}")
 
-#                 name = 'topk_multiscale_gnn'
+    #             name = 'topk_multiscale_gnn'
 
-#                 model = TopkMultiscaleGNN(
-#                     input_node_channels=input_node_channels,
-#                     input_edge_channels=input_edge_channels,
-#                     hidden_channels=hidden_channels,
-#                     output_node_channels=output_node_channels,
-#                     n_mlp_hidden_layers=n_mlp_hidden_layers,
-#                     n_mmp_layers=n_mmp_layers,
-#                     n_messagePassing_layers=n_messagePassing_layers,
-#                     max_level_mmp=max_level_mmp,
-#                     max_level_topk=max_level_topk,
-#                     pool_ratios=pool_ratios,
-#                     l_char=l_char,
-#                     name=name
-#                 )
-#                 logging.info("Initialized TopkMultiscaleGNN model.")
+    #             model = TopkMultiscaleGNN(
+    #                 input_node_channels=input_node_channels,
+    #                 input_edge_channels=input_edge_channels,
+    #                 hidden_channels=hidden_channels,
+    #                 output_node_channels=output_node_channels,
+    #                 n_mlp_hidden_layers=n_mlp_hidden_layers,
+    #                 n_mmp_layers=n_mmp_layers,
+    #                 n_messagePassing_layers=n_messagePassing_layers,
+    #                 max_level_mmp=max_level_mmp,
+    #                 max_level_topk=max_level_topk,
+    #                 pool_ratios=pool_ratios,
+    #                 l_char=l_char,
+    #                 name=name
+    #             )
+    #             logging.info("Initialized TopkMultiscaleGNN model.")
 
-#             else:
-#                 raise ValueError(f"Unknown autoencoder model {model_name}")
+    #         else:
+    #             raise ValueError(f"Unknown autoencoder model {model_name}")
 
-#         else:
-#             # Non-autoencoder models
-#             if model_name == 'intgnn':
-#                 in_channels_node = sample.x.shape[1]
-#                 in_channels_edge = sample.edge_attr.shape[1] if sample.edge_attr is not None else 0
-#                 hidden_channels = hyperparams['hidden_dim']
-#                 out_channels = sample.y.shape[1]
-#                 n_mlp_encode = 3
-#                 n_mlp_mp = 2
-#                 n_mp_down_topk = [1, 1]
-#                 n_mp_up_topk = [1, 1]
-#                 pool_ratios = hyperparams.get('pool_ratios', [])
-#                 n_mp_down_enc = [4]
-#                 n_mp_up_enc = []
-#                 lengthscales_enc = []
-#                 n_mp_down_dec = [2, 2, 4]
-#                 n_mp_up_dec = [2, 2]
-#                 lengthscales_dec = [0.5, 1.0]
-#                 interp = 'learned'
-#                 act = F.elu
-#                 param_sharing = False
+    #     else:
+    #         # Non-autoencoder models
+    #         if model_name == 'intgnn':
+    #             in_channels_node = sample.x.shape[1]
+    #             in_channels_edge = sample.edge_attr.shape[1] if sample.edge_attr is not None else 0
+    #             hidden_channels = hyperparams['hidden_dim']
+    #             out_channels = sample.y.shape[1]
+    #             n_mlp_encode = 3
+    #             n_mlp_mp = 2
+    #             n_mp_down_topk = [1, 1]
+    #             n_mp_up_topk = [1, 1]
+    #             pool_ratios = hyperparams.get('pool_ratios', [])
+    #             n_mp_down_enc = [4]
+    #             n_mp_up_enc = []
+    #             lengthscales_enc = []
+    #             n_mp_down_dec = [2, 2, 4]
+    #             n_mp_up_dec = [2, 2]
+    #             lengthscales_dec = [0.5, 1.0]
+    #             interp = 'learned'
+    #             act = F.elu
+    #             param_sharing = False
 
-#                 # Create bounding box if needed
-#                 bounding_box = []
-#                 if len(lengthscales_dec) > 0:
-#                     x_lo = sample.pos[:, 0].min() - lengthscales_dec[0] / 2
-#                     x_hi = sample.pos[:, 0].max() + lengthscales_dec[0] / 2
-#                     y_lo = sample.pos[:, 1].min() - lengthscales_dec[0] / 2
-#                     y_hi = sample.pos[:, 1].max() + lengthscales_dec[0] / 2
-#                     z_lo = sample.pos[:, 2].min() - lengthscales_dec[0] / 2
-#                     z_hi = sample.pos[:, 2].max() + lengthscales_dec[0] / 2
-#                     bounding_box = [
-#                         x_lo.item(), x_hi.item(),
-#                         y_lo.item(), y_hi.item(),
-#                         z_lo.item(), z_hi.item()
-#                     ]
+    #             # Create bounding box if needed
+    #             bounding_box = []
+    #             if len(lengthscales_dec) > 0:
+    #                 x_lo = sample.pos[:, 0].min() - lengthscales_dec[0] / 2
+    #                 x_hi = sample.pos[:, 0].max() + lengthscales_dec[0] / 2
+    #                 y_lo = sample.pos[:, 1].min() - lengthscales_dec[0] / 2
+    #                 y_hi = sample.pos[:, 1].max() + lengthscales_dec[0] / 2
+    #                 z_lo = sample.pos[:, 2].min() - lengthscales_dec[0] / 2
+    #                 z_hi = sample.pos[:, 2].max() + lengthscales_dec[0] / 2
+    #                 bounding_box = [
+    #                     x_lo.item(), x_hi.item(),
+    #                     y_lo.item(), y_hi.item(),
+    #                     z_lo.item(), z_hi.item()
+    #                 ]
 
-#                 model = GNN_TopK(
-#                     in_channels_node,
-#                     in_channels_edge,
-#                     hidden_channels,
-#                     out_channels,
-#                     n_mlp_encode,
-#                     n_mlp_mp,
-#                     n_mp_down_topk,
-#                     n_mp_up_topk,
-#                     pool_ratios,
-#                     n_mp_down_enc,
-#                     n_mp_up_enc,
-#                     n_mp_down_dec,
-#                     n_mp_up_dec,
-#                     lengthscales_enc,
-#                     lengthscales_dec,
-#                     bounding_box,
-#                     interp,
-#                     act,
-#                     param_sharing,
-#                     name='gnn_topk'
-#                 )
-#                 logging.info("Initialized GNN_TopK model.")
+    #             model = GNN_TopK(
+    #                 in_channels_node,
+    #                 in_channels_edge,
+    #                 hidden_channels,
+    #                 out_channels,
+    #                 n_mlp_encode,
+    #                 n_mlp_mp,
+    #                 n_mp_down_topk,
+    #                 n_mp_up_topk,
+    #                 pool_ratios,
+    #                 n_mp_down_enc,
+    #                 n_mp_up_enc,
+    #                 n_mp_down_dec,
+    #                 n_mp_up_dec,
+    #                 lengthscales_enc,
+    #                 lengthscales_dec,
+    #                 bounding_box,
+    #                 interp,
+    #                 act,
+    #                 param_sharing,
+    #                 name='gnn_topk'
+    #             )
+    #             logging.info("Initialized GNN_TopK model.")
 
-#             elif model_name == 'singlescale':
-#                 input_node_channels = sample.x.shape[1]
-#                 input_edge_channels = sample.edge_attr.shape[1] if sample.edge_attr is not None else 0
-#                 hidden_channels = hyperparams['hidden_dim']
-#                 output_node_channels = sample.y.shape[1]
-#                 n_mlp_hidden_layers = 0  # As per MeshGraphNet
-#                 n_messagePassing_layers = hyperparams['num_layers']
-#                 name = 'singlescale_gnn'
+    #         elif model_name == 'singlescale':
+    #             input_node_channels = sample.x.shape[1]
+    #             input_edge_channels = sample.edge_attr.shape[1] if sample.edge_attr is not None else 0
+    #             hidden_channels = hyperparams['hidden_dim']
+    #             output_node_channels = sample.y.shape[1]
+    #             n_mlp_hidden_layers = 0  # As per MeshGraphNet
+    #             n_messagePassing_layers = hyperparams['num_layers']
+    #             name = 'singlescale_gnn'
 
-#                 model = SinglescaleGNN(
-#                     input_node_channels=input_node_channels,
-#                     input_edge_channels=input_edge_channels,
-#                     hidden_channels=hidden_channels,
-#                     output_node_channels=output_node_channels,
-#                     n_mlp_hidden_layers=n_mlp_hidden_layers,
-#                     n_messagePassing_layers=n_messagePassing_layers,
-#                     name=name
-#                 )
-#                 logging.info("Initialized SinglescaleGNN model.")
+    #             model = SinglescaleGNN(
+    #                 input_node_channels=input_node_channels,
+    #                 input_edge_channels=input_edge_channels,
+    #                 hidden_channels=hidden_channels,
+    #                 output_node_channels=output_node_channels,
+    #                 n_mlp_hidden_layers=n_mlp_hidden_layers,
+    #                 n_messagePassing_layers=n_messagePassing_layers,
+    #                 name=name
+    #             )
+    #             logging.info("Initialized SinglescaleGNN model.")
 
-#             elif model_name == 'multiscale':
-#                 input_node_channels = sample.x.shape[1]
-#                 input_edge_channels = sample.edge_attr.shape[1] if sample.edge_attr is not None else 0
-#                 hidden_channels = hyperparams['hidden_dim']
-#                 output_node_channels = sample.y.shape[1]
-#                 n_mlp_hidden_layers = hyperparams.get('multiscale_n_mlp_hidden_layers', 2)
-#                 n_mmp_layers = hyperparams.get('multiscale_n_mmp_layers', 4)
-#                 n_messagePassing_layers = hyperparams.get('multiscale_n_message_passing_layers', 2)
-#                 num_layers = hyperparams['num_layers']
-#                 max_level = num_layers // 2 - 1
+    #         elif model_name == 'multiscale':
+    #             input_node_channels = sample.x.shape[1]
+    #             input_edge_channels = sample.edge_attr.shape[1] if sample.edge_attr is not None else 0
+    #             hidden_channels = hyperparams['hidden_dim']
+    #             output_node_channels = sample.y.shape[1]
+    #             n_mlp_hidden_layers = hyperparams.get('multiscale_n_mlp_hidden_layers', 2)
+    #             n_mmp_layers = hyperparams.get('multiscale_n_mmp_layers', 4)
+    #             n_messagePassing_layers = hyperparams.get('multiscale_n_message_passing_layers', 2)
+    #             num_layers = hyperparams['num_layers']
+    #             max_level = num_layers // 2 - 1
 
-#                 # Compute l_char (characteristic length scale)
-#                 edge_index = sample.edge_index
-#                 pos = sample.pos
-#                 edge_lengths = torch.norm(pos[edge_index[0]] - pos[edge_index[1]], dim=1)
-#                 l_char = edge_lengths.mean().item()
-#                 logging.info(f"Computed l_char (characteristic length scale): {l_char}")
+    #             # Compute l_char (characteristic length scale)
+    #             edge_index = sample.edge_index
+    #             pos = sample.pos
+    #             edge_lengths = torch.norm(pos[edge_index[0]] - pos[edge_index[1]], dim=1)
+    #             l_char = edge_lengths.mean().item()
+    #             logging.info(f"Computed l_char (characteristic length scale): {l_char}")
 
-#                 name = 'multiscale_gnn'
+    #             name = 'multiscale_gnn'
 
-#                 model = MultiscaleGNN(
-#                     input_node_channels=input_node_channels,
-#                     input_edge_channels=input_edge_channels,
-#                     hidden_channels=hidden_channels,
-#                     output_node_channels=output_node_channels,
-#                     n_mlp_hidden_layers=n_mlp_hidden_layers,
-#                     n_mmp_layers=n_mmp_layers,
-#                     n_messagePassing_layers=n_messagePassing_layers,
-#                     max_level=max_level,
-#                     l_char=l_char,
-#                     name=name
-#                 )
-#                 logging.info("Initialized MultiscaleGNN model.")
+    #             model = MultiscaleGNN(
+    #                 input_node_channels=input_node_channels,
+    #                 input_edge_channels=input_edge_channels,
+    #                 hidden_channels=hidden_channels,
+    #                 output_node_channels=output_node_channels,
+    #                 n_mlp_hidden_layers=n_mlp_hidden_layers,
+    #                 n_mmp_layers=n_mmp_layers,
+    #                 n_messagePassing_layers=n_messagePassing_layers,
+    #                 max_level=max_level,
+    #                 l_char=l_char,
+    #                 name=name
+    #             )
+    #             logging.info("Initialized MultiscaleGNN model.")
 
-#             elif model_name == 'gcn':
-#                 num_layers = hyperparams['num_layers']
-#                 required_pool_ratios = num_layers - 2
-#                 pool_ratios = hyperparams.get('pool_ratios', [])
-#                 current_pool_ratios = len(pool_ratios)
+    #         elif model_name == 'gcn':
+    #             num_layers = hyperparams['num_layers']
+    #             required_pool_ratios = num_layers - 2
+    #             pool_ratios = hyperparams.get('pool_ratios', [])
+    #             current_pool_ratios = len(pool_ratios)
 
-#                 if required_pool_ratios <= 0:
-#                     pool_ratios = []
-#                     logging.info(f"No pooling layers required for num_layers {num_layers}.")
-#                 elif current_pool_ratios < required_pool_ratios:
-#                     pool_ratios += [1.0] * (required_pool_ratios - current_pool_ratios)
-#                     logging.warning(f"Pool ratios were padded with 1.0 to match required_pool_ratios: {required_pool_ratios}")
-#                 elif current_pool_ratios > required_pool_ratios:
-#                     pool_ratios = pool_ratios[:required_pool_ratios]
-#                     logging.warning(f"Pool ratios were trimmed to match required_pool_ratios: {required_pool_ratios}")
+    #             if required_pool_ratios <= 0:
+    #                 pool_ratios = []
+    #                 logging.info(f"No pooling layers required for num_layers {num_layers}.")
+    #             elif current_pool_ratios < required_pool_ratios:
+    #                 pool_ratios += [1.0] * (required_pool_ratios - current_pool_ratios)
+    #                 logging.warning(f"Pool ratios were padded with 1.0 to match required_pool_ratios: {required_pool_ratios}")
+    #             elif current_pool_ratios > required_pool_ratios:
+    #                 pool_ratios = pool_ratios[:required_pool_ratios]
+    #                 logging.warning(f"Pool ratios were trimmed to match required_pool_ratios: {required_pool_ratios}")
 
-#                 in_channels = sample.x.shape[1]
-#                 hidden_dim = hyperparams['hidden_dim']
-#                 out_channels = sample.y.shape[1]
+    #             in_channels = sample.x.shape[1]
+    #             hidden_dim = hyperparams['hidden_dim']
+    #             out_channels = sample.y.shape[1]
 
-#                 model = GraphConvolutionNetwork(
-#                     in_channels=in_channels,
-#                     hidden_dim=hidden_dim,
-#                     out_channels=out_channels,
-#                     num_layers=num_layers,
-#                     pool_ratios=pool_ratios,
-#                 )
-#                 logging.info("Initialized GraphConvolutionNetwork model.")
+    #             model = GraphConvolutionNetwork(
+    #                 in_channels=in_channels,
+    #                 hidden_dim=hidden_dim,
+    #                 out_channels=out_channels,
+    #                 num_layers=num_layers,
+    #                 pool_ratios=pool_ratios,
+    #             )
+    #             logging.info("Initialized GraphConvolutionNetwork model.")
 
-#             elif model_name == 'gat':
-#                 num_layers = hyperparams['num_layers']
-#                 required_pool_ratios = num_layers - 2
-#                 pool_ratios = hyperparams.get('pool_ratios', [])
-#                 current_pool_ratios = len(pool_ratios)
+    #         elif model_name == 'gat':
+    #             num_layers = hyperparams['num_layers']
+    #             required_pool_ratios = num_layers - 2
+    #             pool_ratios = hyperparams.get('pool_ratios', [])
+    #             current_pool_ratios = len(pool_ratios)
 
-#                 if required_pool_ratios <= 0:
-#                     pool_ratios = []
-#                     logging.info(f"No pooling layers required for num_layers {num_layers}.")
-#                 elif current_pool_ratios < required_pool_ratios:
-#                     pool_ratios += [1.0] * (required_pool_ratios - current_pool_ratios)
-#                     logging.warning(f"Pool ratios were padded with 1.0 to match required_pool_ratios: {required_pool_ratios}")
-#                 elif current_pool_ratios > required_pool_ratios:
-#                     pool_ratios = pool_ratios[:required_pool_ratios]
-#                     logging.warning(f"Pool ratios were trimmed to match required_pool_ratios: {required_pool_ratios}")
+    #             if required_pool_ratios <= 0:
+    #                 pool_ratios = []
+    #                 logging.info(f"No pooling layers required for num_layers {num_layers}.")
+    #             elif current_pool_ratios < required_pool_ratios:
+    #                 pool_ratios += [1.0] * (required_pool_ratios - current_pool_ratios)
+    #                 logging.warning(f"Pool ratios were padded with 1.0 to match required_pool_ratios: {required_pool_ratios}")
+    #             elif current_pool_ratios > required_pool_ratios:
+    #                 pool_ratios = pool_ratios[:required_pool_ratios]
+    #                 logging.warning(f"Pool ratios were trimmed to match required_pool_ratios: {required_pool_ratios}")
 
-#                 in_channels = sample.x.shape[1]
-#                 hidden_dim = hyperparams['hidden_dim']
-#                 out_channels = sample.y.shape[1]
-#                 heads = hyperparams.get('gat_heads', 1)
+    #             in_channels = sample.x.shape[1]
+    #             hidden_dim = hyperparams['hidden_dim']
+    #             out_channels = sample.y.shape[1]
+    #             heads = hyperparams.get('gat_heads', 1)
 
-#                 model = GraphAttentionNetwork(
-#                     in_channels=in_channels,
-#                     hidden_dim=hidden_dim,
-#                     out_channels=out_channels,
-#                     num_layers=num_layers,
-#                     pool_ratios=pool_ratios,
-#                     heads=heads,
-#                 )
-#                 logging.info("Initialized GraphAttentionNetwork model.")
+    #             model = GraphAttentionNetwork(
+    #                 in_channels=in_channels,
+    #                 hidden_dim=hidden_dim,
+    #                 out_channels=out_channels,
+    #                 num_layers=num_layers,
+    #                 pool_ratios=pool_ratios,
+    #                 heads=heads,
+    #             )
+    #             logging.info("Initialized GraphAttentionNetwork model.")
 
-#             elif model_name == 'gtr':
-#                 num_layers = hyperparams['num_layers']
-#                 required_pool_ratios = num_layers - 2
-#                 pool_ratios = hyperparams.get('pool_ratios', [])
-#                 current_pool_ratios = len(pool_ratios)
+    #         elif model_name == 'gtr':
+    #             num_layers = hyperparams['num_layers']
+    #             required_pool_ratios = num_layers - 2
+    #             pool_ratios = hyperparams.get('pool_ratios', [])
+    #             current_pool_ratios = len(pool_ratios)
 
-#                 if required_pool_ratios <= 0:
-#                     pool_ratios = []
-#                     logging.info(f"No pooling layers required for num_layers {num_layers}.")
-#                 elif current_pool_ratios < required_pool_ratios:
-#                     pool_ratios += [1.0] * (required_pool_ratios - current_pool_ratios)
-#                     logging.warning(f"Pool ratios were padded with 1.0 to match required_pool_ratios: {required_pool_ratios}")
-#                 elif current_pool_ratios > required_pool_ratios:
-#                     pool_ratios = pool_ratios[:required_pool_ratios]
-#                     logging.warning(f"Pool ratios were trimmed to match required_pool_ratios: {required_pool_ratios}")
+    #             if required_pool_ratios <= 0:
+    #                 pool_ratios = []
+    #                 logging.info(f"No pooling layers required for num_layers {num_layers}.")
+    #             elif current_pool_ratios < required_pool_ratios:
+    #                 pool_ratios += [1.0] * (required_pool_ratios - current_pool_ratios)
+    #                 logging.warning(f"Pool ratios were padded with 1.0 to match required_pool_ratios: {required_pool_ratios}")
+    #             elif current_pool_ratios > required_pool_ratios:
+    #                 pool_ratios = pool_ratios[:required_pool_ratios]
+    #                 logging.warning(f"Pool ratios were trimmed to match required_pool_ratios: {required_pool_ratios}")
 
-#                 in_channels = sample.x.shape[1]
-#                 hidden_dim = hyperparams['hidden_dim']
-#                 out_channels = sample.y.shape[1]
-#                 num_heads = hyperparams.get('gtr_heads', 4)
-#                 concat = hyperparams.get('gtr_concat', True)
-#                 dropout = hyperparams.get('gtr_dropout', 0.0)
-#                 edge_dim = sample.edge_attr.shape[1] if sample.edge_attr is not None else None
+    #             in_channels = sample.x.shape[1]
+    #             hidden_dim = hyperparams['hidden_dim']
+    #             out_channels = sample.y.shape[1]
+    #             num_heads = hyperparams.get('gtr_heads', 4)
+    #             concat = hyperparams.get('gtr_concat', True)
+    #             dropout = hyperparams.get('gtr_dropout', 0.0)
+    #             edge_dim = sample.edge_attr.shape[1] if sample.edge_attr is not None else None
 
-#                 model = GraphTransformer(
-#                     in_channels=in_channels,
-#                     hidden_dim=hidden_dim,
-#                     out_channels=out_channels,
-#                     num_layers=num_layers,
-#                     pool_ratios=pool_ratios,
-#                     num_heads=num_heads,
-#                     concat=concat,
-#                     dropout=dropout,
-#                     edge_dim=edge_dim,
-#                 )
-#                 logging.info("Initialized GraphTransformer model.")
+    #             model = GraphTransformer(
+    #                 in_channels=in_channels,
+    #                 hidden_dim=hidden_dim,
+    #                 out_channels=out_channels,
+    #                 num_layers=num_layers,
+    #                 pool_ratios=pool_ratios,
+    #                 num_heads=num_heads,
+    #                 concat=concat,
+    #                 dropout=dropout,
+    #                 edge_dim=edge_dim,
+    #             )
+    #             logging.info("Initialized GraphTransformer model.")
 
-#             elif model_name == 'mgn':
-#                 node_in_dim = sample.x.shape[1]
-#                 edge_in_dim = sample.edge_attr.shape[1] if sample.edge_attr is not None else 0
-#                 node_out_dim = sample.y.shape[1]
-#                 hidden_dim = hyperparams['hidden_dim']
-#                 num_layers = hyperparams['num_layers']
+    #         elif model_name == 'mgn':
+    #             node_in_dim = sample.x.shape[1]
+    #             edge_in_dim = sample.edge_attr.shape[1] if sample.edge_attr is not None else 0
+    #             node_out_dim = sample.y.shape[1]
+    #             hidden_dim = hyperparams['hidden_dim']
+    #             num_layers = hyperparams['num_layers']
 
-#                 model = MeshGraphNet(
-#                     node_in_dim=node_in_dim,
-#                     edge_in_dim=edge_in_dim,
-#                     node_out_dim=node_out_dim,
-#                     hidden_dim=hidden_dim,
-#                     num_layers=num_layers
-#                 )
-#                 logging.info("Initialized MeshGraphNet model.")
+    #             model = MeshGraphNet(
+    #                 node_in_dim=node_in_dim,
+    #                 edge_in_dim=edge_in_dim,
+    #                 node_out_dim=node_out_dim,
+    #                 hidden_dim=hidden_dim,
+    #                 num_layers=num_layers
+    #             )
+    #             logging.info("Initialized MeshGraphNet model.")
 
-#             else:
-#                 logging.error(f"Unknown model '{model_name}'.")
-#                 sys.exit(1)
+    #         else:
+    #             logging.error(f"Unknown model '{model_name}'.")
+    #             sys.exit(1)
 
-#         return model
+    #     return model
 
 
 #     # Initialize the model
@@ -923,7 +923,7 @@ from pmd_beamphysics import ParticleGroup  # Import ParticleGroup
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Import your models and utilities
-from datasets import GraphDataset
+from src.datasets.datasets import GraphDataset
 from utils import generate_data_dirs, set_random_seed
 from src.graph_models.models.graph_networks import (
     GraphConvolutionNetwork,
@@ -1121,6 +1121,374 @@ def plot_particle_groups(pred_pg, target_pg, idx, error_type, results_folder):
         plt.savefig(os.path.join(results_folder, f'{error_type}_mse_sample_{idx}_target_{x_var}_{p_var}.png'))
         plt.close()
 
+def initialize_model(hyperparams, sample):
+        model_name = hyperparams['model'].lower()
+
+        def is_autoencoder_model(model_name):
+            return model_name.lower().endswith('-ae') or model_name.lower() in ['multiscale-topk']
+
+        if is_autoencoder_model(model_name):
+            # Autoencoder models
+            num_layers = hyperparams['num_layers']
+            if num_layers % 2 != 0:
+                raise ValueError(f"For autoencoder models, 'num_layers' must be an even number. Received: {num_layers}")
+            depth = num_layers // 2
+            logging.info(f"Autoencoder selected. Using depth: {depth} (num_layers: {num_layers})")
+            required_pool_ratios = depth - 1
+            pool_ratios = hyperparams.get('pool_ratios', [])
+            current_pool_ratios = len(pool_ratios)
+
+            if required_pool_ratios <= 0:
+                pool_ratios = []
+                logging.info(f"No pooling layers required for depth {depth}.")
+            elif current_pool_ratios < required_pool_ratios:
+                pool_ratios += [1.0] * (required_pool_ratios - current_pool_ratios)
+                logging.warning(f"Pool ratios were padded with 1.0 to match required_pool_ratios: {required_pool_ratios}")
+            elif current_pool_ratios > required_pool_ratios:
+                pool_ratios = pool_ratios[:required_pool_ratios]
+                logging.warning(f"Pool ratios were trimmed to match required_pool_ratios: {required_pool_ratios}")
+
+            if model_name == 'gcn-ae':
+                in_channels = sample.x.shape[1]
+                hidden_dim = hyperparams['hidden_dim']
+                out_channels = sample.y.shape[1]
+
+                model = GraphConvolutionalAutoEncoder(
+                    in_channels=in_channels,
+                    hidden_dim=hidden_dim,
+                    out_channels=out_channels,
+                    depth=depth,
+                    pool_ratios=pool_ratios
+                )
+                logging.info("Initialized GraphConvolutionalAutoEncoder.")
+
+            elif model_name == 'gat-ae':
+                in_channels = sample.x.shape[1]
+                hidden_dim = hyperparams['hidden_dim']
+                out_channels = sample.y.shape[1]
+                heads = hyperparams.get('gat_heads', 1)
+
+                model = GraphAttentionAutoEncoder(
+                    in_channels=in_channels,
+                    hidden_dim=hidden_dim,
+                    out_channels=out_channels,
+                    depth=depth,
+                    pool_ratios=pool_ratios,
+                    heads=heads
+                )
+                logging.info("Initialized GraphAttentionAutoEncoder.")
+
+            elif model_name == 'gtr-ae':
+                in_channels = sample.x.shape[1]
+                hidden_dim = hyperparams['hidden_dim']
+                out_channels = sample.y.shape[1]
+                num_heads = hyperparams.get('gtr_heads', 4)
+                concat = hyperparams.get('gtr_concat', True)
+                dropout = hyperparams.get('gtr_dropout', 0.0)
+                edge_dim = sample.edge_attr.shape[1] if sample.edge_attr is not None else None
+
+                model = GraphTransformerAutoEncoder(
+                    in_channels=in_channels,
+                    hidden_dim=hidden_dim,
+                    out_channels=out_channels,
+                    depth=depth,
+                    pool_ratios=pool_ratios,
+                    num_heads=num_heads,
+                    concat=concat,
+                    dropout=dropout,
+                    edge_dim=edge_dim
+                )
+                logging.info("Initialized GraphTransformerAutoEncoder.")
+
+            elif model_name == 'mgn-ae':
+                node_in_dim = sample.x.shape[1]
+                edge_in_dim = sample.edge_attr.shape[1] if sample.edge_attr is not None else 0
+                node_out_dim = sample.y.shape[1]
+                hidden_dim = hyperparams['hidden_dim']
+
+                model = MeshGraphAutoEncoder(
+                    node_in_dim=node_in_dim,
+                    edge_in_dim=edge_in_dim,
+                    node_out_dim=node_out_dim,
+                    hidden_dim=hidden_dim,
+                    depth=depth,
+                    pool_ratios=pool_ratios
+                )
+                logging.info("Initialized MeshGraphAutoEncoder.")
+
+            elif model_name == 'multiscale-topk':
+                input_node_channels = sample.x.shape[1]
+                input_edge_channels = sample.edge_attr.shape[1] if sample.edge_attr is not None else 0
+                hidden_channels = hyperparams['hidden_dim']
+                output_node_channels = sample.y.shape[1]
+                n_mlp_hidden_layers = hyperparams.get('multiscale_n_mlp_hidden_layers', 2)
+                n_mmp_layers = hyperparams.get('multiscale_n_mmp_layers', 4)
+                n_messagePassing_layers = hyperparams.get('multiscale_n_message_passing_layers', 2)
+                max_level_mmp = num_layers // 2 - 1
+                max_level_topk = num_layers // 2 - 1
+
+                # Compute l_char (characteristic length scale)
+                edge_index = sample.edge_index
+                pos = sample.pos
+                edge_lengths = torch.norm(pos[edge_index[0]] - pos[edge_index[1]], dim=1)
+                l_char = edge_lengths.mean().item()
+                logging.info(f"Computed l_char (characteristic length scale): {l_char}")
+
+                name = 'topk_multiscale_gnn'
+
+                model = TopkMultiscaleGNN(
+                    input_node_channels=input_node_channels,
+                    input_edge_channels=input_edge_channels,
+                    hidden_channels=hidden_channels,
+                    output_node_channels=output_node_channels,
+                    n_mlp_hidden_layers=n_mlp_hidden_layers,
+                    n_mmp_layers=n_mmp_layers,
+                    n_messagePassing_layers=n_messagePassing_layers,
+                    max_level_mmp=max_level_mmp,
+                    max_level_topk=max_level_topk,
+                    pool_ratios=pool_ratios,
+                    l_char=l_char,
+                    name=name
+                )
+                logging.info("Initialized TopkMultiscaleGNN model.")
+
+            else:
+                raise ValueError(f"Unknown autoencoder model {model_name}")
+
+        else:
+            # Non-autoencoder models
+            if model_name == 'intgnn':
+                in_channels_node = sample.x.shape[1]
+                in_channels_edge = sample.edge_attr.shape[1] if sample.edge_attr is not None else 0
+                hidden_channels = hyperparams['hidden_dim']
+                out_channels = sample.y.shape[1]
+                n_mlp_encode = 3
+                n_mlp_mp = 2
+                n_mp_down_topk = [1, 1]
+                n_mp_up_topk = [1, 1]
+                pool_ratios = hyperparams.get('pool_ratios', [])
+                n_mp_down_enc = [4]
+                n_mp_up_enc = []
+                lengthscales_enc = []
+                n_mp_down_dec = [2, 2, 4]
+                n_mp_up_dec = [2, 2]
+                lengthscales_dec = [0.5, 1.0]
+                interp = 'learned'
+                act = F.elu
+                param_sharing = False
+
+                # Create bounding box if needed
+                bounding_box = []
+                if len(lengthscales_dec) > 0:
+                    x_lo = sample.pos[:, 0].min() - lengthscales_dec[0] / 2
+                    x_hi = sample.pos[:, 0].max() + lengthscales_dec[0] / 2
+                    y_lo = sample.pos[:, 1].min() - lengthscales_dec[0] / 2
+                    y_hi = sample.pos[:, 1].max() + lengthscales_dec[0] / 2
+                    z_lo = sample.pos[:, 2].min() - lengthscales_dec[0] / 2
+                    z_hi = sample.pos[:, 2].max() + lengthscales_dec[0] / 2
+                    bounding_box = [
+                        x_lo.item(), x_hi.item(),
+                        y_lo.item(), y_hi.item(),
+                        z_lo.item(), z_hi.item()
+                    ]
+
+                model = GNN_TopK(
+                    in_channels_node,
+                    in_channels_edge,
+                    hidden_channels,
+                    out_channels,
+                    n_mlp_encode,
+                    n_mlp_mp,
+                    n_mp_down_topk,
+                    n_mp_up_topk,
+                    pool_ratios,
+                    n_mp_down_enc,
+                    n_mp_up_enc,
+                    n_mp_down_dec,
+                    n_mp_up_dec,
+                    lengthscales_enc,
+                    lengthscales_dec,
+                    bounding_box,
+                    interp,
+                    act,
+                    param_sharing,
+                    name='gnn_topk'
+                )
+                logging.info("Initialized GNN_TopK model.")
+
+            elif model_name == 'singlescale':
+                input_node_channels = sample.x.shape[1]
+                input_edge_channels = sample.edge_attr.shape[1] if sample.edge_attr is not None else 0
+                hidden_channels = hyperparams['hidden_dim']
+                output_node_channels = sample.y.shape[1]
+                n_mlp_hidden_layers = 0  # As per MeshGraphNet
+                n_messagePassing_layers = hyperparams['num_layers']
+                name = 'singlescale_gnn'
+
+                model = SinglescaleGNN(
+                    input_node_channels=input_node_channels,
+                    input_edge_channels=input_edge_channels,
+                    hidden_channels=hidden_channels,
+                    output_node_channels=output_node_channels,
+                    n_mlp_hidden_layers=n_mlp_hidden_layers,
+                    n_messagePassing_layers=n_messagePassing_layers,
+                    name=name
+                )
+                logging.info("Initialized SinglescaleGNN model.")
+
+            elif model_name == 'multiscale':
+                input_node_channels = sample.x.shape[1]
+                input_edge_channels = sample.edge_attr.shape[1] if sample.edge_attr is not None else 0
+                hidden_channels = hyperparams['hidden_dim']
+                output_node_channels = sample.y.shape[1]
+                n_mlp_hidden_layers = hyperparams.get('multiscale_n_mlp_hidden_layers', 2)
+                n_mmp_layers = hyperparams.get('multiscale_n_mmp_layers', 4)
+                n_messagePassing_layers = hyperparams.get('multiscale_n_message_passing_layers', 2)
+                num_layers = hyperparams['num_layers']
+                max_level = num_layers // 2 - 1
+
+                # Compute l_char (characteristic length scale)
+                edge_index = sample.edge_index
+                pos = sample.pos
+                edge_lengths = torch.norm(pos[edge_index[0]] - pos[edge_index[1]], dim=1)
+                l_char = edge_lengths.mean().item()
+                logging.info(f"Computed l_char (characteristic length scale): {l_char}")
+
+                name = 'multiscale_gnn'
+
+                model = MultiscaleGNN(
+                    input_node_channels=input_node_channels,
+                    input_edge_channels=input_edge_channels,
+                    hidden_channels=hidden_channels,
+                    output_node_channels=output_node_channels,
+                    n_mlp_hidden_layers=n_mlp_hidden_layers,
+                    n_mmp_layers=n_mmp_layers,
+                    n_messagePassing_layers=n_messagePassing_layers,
+                    max_level=max_level,
+                    l_char=l_char,
+                    name=name
+                )
+                logging.info("Initialized MultiscaleGNN model.")
+
+            elif model_name == 'gcn':
+                num_layers = hyperparams['num_layers']
+                required_pool_ratios = num_layers - 2
+                pool_ratios = hyperparams.get('pool_ratios', [])
+                current_pool_ratios = len(pool_ratios)
+
+                if required_pool_ratios <= 0:
+                    pool_ratios = []
+                    logging.info(f"No pooling layers required for num_layers {num_layers}.")
+                elif current_pool_ratios < required_pool_ratios:
+                    pool_ratios += [1.0] * (required_pool_ratios - current_pool_ratios)
+                    logging.warning(f"Pool ratios were padded with 1.0 to match required_pool_ratios: {required_pool_ratios}")
+                elif current_pool_ratios > required_pool_ratios:
+                    pool_ratios = pool_ratios[:required_pool_ratios]
+                    logging.warning(f"Pool ratios were trimmed to match required_pool_ratios: {required_pool_ratios}")
+
+                in_channels = sample.x.shape[1]
+                hidden_dim = hyperparams['hidden_dim']
+                out_channels = sample.y.shape[1]
+
+                model = GraphConvolutionNetwork(
+                    in_channels=in_channels,
+                    hidden_dim=hidden_dim,
+                    out_channels=out_channels,
+                    num_layers=num_layers,
+                    pool_ratios=pool_ratios,
+                )
+                logging.info("Initialized GraphConvolutionNetwork model.")
+
+            elif model_name == 'gat':
+                num_layers = hyperparams['num_layers']
+                required_pool_ratios = num_layers - 2
+                pool_ratios = hyperparams.get('pool_ratios', [])
+                current_pool_ratios = len(pool_ratios)
+
+                if required_pool_ratios <= 0:
+                    pool_ratios = []
+                    logging.info(f"No pooling layers required for num_layers {num_layers}.")
+                elif current_pool_ratios < required_pool_ratios:
+                    pool_ratios += [1.0] * (required_pool_ratios - current_pool_ratios)
+                    logging.warning(f"Pool ratios were padded with 1.0 to match required_pool_ratios: {required_pool_ratios}")
+                elif current_pool_ratios > required_pool_ratios:
+                    pool_ratios = pool_ratios[:required_pool_ratios]
+                    logging.warning(f"Pool ratios were trimmed to match required_pool_ratios: {required_pool_ratios}")
+
+                in_channels = sample.x.shape[1]
+                hidden_dim = hyperparams['hidden_dim']
+                out_channels = sample.y.shape[1]
+                heads = hyperparams.get('gat_heads', 1)
+
+                model = GraphAttentionNetwork(
+                    in_channels=in_channels,
+                    hidden_dim=hidden_dim,
+                    out_channels=out_channels,
+                    num_layers=num_layers,
+                    pool_ratios=pool_ratios,
+                    heads=heads,
+                )
+                logging.info("Initialized GraphAttentionNetwork model.")
+
+            elif model_name == 'gtr':
+                num_layers = hyperparams['num_layers']
+                required_pool_ratios = num_layers - 2
+                pool_ratios = hyperparams.get('pool_ratios', [])
+                current_pool_ratios = len(pool_ratios)
+
+                if required_pool_ratios <= 0:
+                    pool_ratios = []
+                    logging.info(f"No pooling layers required for num_layers {num_layers}.")
+                elif current_pool_ratios < required_pool_ratios:
+                    pool_ratios += [1.0] * (required_pool_ratios - current_pool_ratios)
+                    logging.warning(f"Pool ratios were padded with 1.0 to match required_pool_ratios: {required_pool_ratios}")
+                elif current_pool_ratios > required_pool_ratios:
+                    pool_ratios = pool_ratios[:required_pool_ratios]
+                    logging.warning(f"Pool ratios were trimmed to match required_pool_ratios: {required_pool_ratios}")
+
+                in_channels = sample.x.shape[1]
+                hidden_dim = hyperparams['hidden_dim']
+                out_channels = sample.y.shape[1]
+                num_heads = hyperparams.get('gtr_heads', 4)
+                concat = hyperparams.get('gtr_concat', True)
+                dropout = hyperparams.get('gtr_dropout', 0.0)
+                edge_dim = sample.edge_attr.shape[1] if sample.edge_attr is not None else None
+
+                model = GraphTransformer(
+                    in_channels=in_channels,
+                    hidden_dim=hidden_dim,
+                    out_channels=out_channels,
+                    num_layers=num_layers,
+                    pool_ratios=pool_ratios,
+                    num_heads=num_heads,
+                    concat=concat,
+                    dropout=dropout,
+                    edge_dim=edge_dim,
+                )
+                logging.info("Initialized GraphTransformer model.")
+
+            elif model_name == 'mgn':
+                node_in_dim = sample.x.shape[1]
+                edge_in_dim = sample.edge_attr.shape[1] if sample.edge_attr is not None else 0
+                node_out_dim = sample.y.shape[1]
+                hidden_dim = hyperparams['hidden_dim']
+                num_layers = hyperparams['num_layers']
+
+                model = MeshGraphNet(
+                    node_in_dim=node_in_dim,
+                    edge_in_dim=edge_in_dim,
+                    node_out_dim=node_out_dim,
+                    hidden_dim=hidden_dim,
+                    num_layers=num_layers
+                )
+                logging.info("Initialized MeshGraphNet model.")
+
+            else:
+                logging.error(f"Unknown model '{model_name}'.")
+                sys.exit(1)
+
+        return model
+
 def evaluate_model(model, dataloader, device, metadata_final_path, results_folder):
     model.eval()
     all_errors = []
@@ -1144,7 +1512,7 @@ def evaluate_model(model, dataloader, device, metadata_final_path, results_folde
     min_mse_indices = sorted_indices[:5]
     max_mse_indices = sorted_indices[-5:]
 
-    global_mean, global_std, _, _ = load_global_statistics(metadata_final_path)
+    global_mean, global_std = load_global_statistics(metadata_final_path)
 
     def inverse_normalize(normalized_data):
         return normalized_data * global_std + global_mean
@@ -1231,60 +1599,14 @@ def model_forward(model, data):
         )
     return x_pred
 
-def load_global_statistics(statistics_file):
+def load_global_statistics(metadata_final_path):
     """Load global mean and standard deviation from a file."""
-    with open(statistics_file, 'r') as f:
-        lines = f.readlines()
+    with open(metadata_final_path, 'r') as f:
+        metadata_final = json.load(f)
+    global_mean_final = torch.tensor(metadata_final['global_mean'])
+    global_std_final = torch.tensor(metadata_final['global_std'])
 
-    global_mean = []
-    global_std = []
-    settings_mean = None
-    settings_std = None
-    mode = None
-
-    for line in lines:
-        line = line.strip()
-        if line == "Per-Step Global Mean:":
-            mode = 'mean'
-            continue
-        elif line == "Per-Step Global Std:":
-            mode = 'std'
-            continue
-        elif line.startswith("Settings Global Mean:"):
-            settings_mean_str = line.split(":", 1)[1].strip()
-            settings_mean = [float(x) for x in settings_mean_str.split(",")]
-            mode = None
-            continue
-        elif line.startswith("Settings Global Std:"):
-            settings_std_str = line.split(":", 1)[1].strip()
-            settings_std = [float(x) for x in settings_std_str.split(",")]
-            mode = None
-            continue
-        elif line.startswith("Step"):
-            if mode in ('mean', 'std'):
-                parts = line.split(":")
-                if len(parts) != 2:
-                    continue
-                _, values_str = parts
-                values = [float(x) for x in values_str.strip().split(",")]
-                if mode == 'mean':
-                    global_mean.append(values)
-                elif mode == 'std':
-                    global_std.append(values)
-            else:
-                continue
-        else:
-            continue
-
-    # Assuming the last step contains the global statistics we need
-    global_mean = torch.tensor(global_mean[-1], dtype=torch.float32)
-    global_std = torch.tensor(global_std[-1], dtype=torch.float32)
-    if settings_mean is not None:
-        settings_mean = torch.tensor(settings_mean, dtype=torch.float32)
-    if settings_std is not None:
-        settings_std = torch.tensor(settings_std, dtype=torch.float32)
-
-    return global_mean, global_std, settings_mean, settings_std
+    return global_mean_final, global_std_final
 
 def main():
     parser = argparse.ArgumentParser(description="Evaluate a model checkpoint")
