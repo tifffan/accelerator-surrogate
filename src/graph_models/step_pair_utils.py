@@ -1,4 +1,4 @@
-# sequence_utils.py
+# step_pair_utils.py
 
 from datetime import datetime
 import os
