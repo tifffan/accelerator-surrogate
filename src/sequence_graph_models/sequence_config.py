@@ -41,7 +41,7 @@ def parse_args():
     parser.add_argument('--verbose', action='store_true', help="Display progress bar while training.")
     parser.add_argument('--subsample_size', type=int, default=None,
                         help="Number of samples to use from the dataset. Use all data if not specified.")
-    parser.add_argument('--max_prediction_horizon', type=int, default=5, help='Maximum prediction horizon for multi-step predictions')
+    parser.add_argument('--horizon', type=int, default=5, help='Maximum prediction horizon for multi-step predictions')
     parser.add_argument('--discount_factor', type=float, default=0.9, help='Discount factor for multi-step loss weighting')
 
     # Learning Rate Scheduler Arguments
