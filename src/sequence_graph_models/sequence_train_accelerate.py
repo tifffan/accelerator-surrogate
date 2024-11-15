@@ -12,7 +12,7 @@ import os
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Import your models and utilities
-from src.datasets.sequence_datasets import SequenceGraphDataset
+from src.datasets.sequence_graph_datasets import SequenceGraphDataset
 from src.graph_models.models.graph_networks import (
     GraphConvolutionNetwork,
     GraphAttentionNetwork,
@@ -45,7 +45,7 @@ def is_autoencoder_model(model_name):
     """
     return model_name.lower().endswith('-ae') or model_name.lower() in ['multiscale-topk']
 
-if __name__ == "__main__":
+def main():
     args = parse_args()
 
     # Set device
@@ -83,7 +83,7 @@ if __name__ == "__main__":
         graph_data_dir=graph_data_dir,
         initial_step=args.initial_step,
         final_step=args.final_step,
-        max_prediction_horizon=args.max_prediction_horizon,
+        max_prediction_horizon=args.horizon,
         task=args.task,
         identical_settings=args.identical_settings,
         settings_file=args.settings_file,
@@ -177,3 +177,6 @@ if __name__ == "__main__":
     else:
         logging.info("Evaluation mode is not implemented yet.")
         pass
+
+if __name__ == "__main__":
+    main()

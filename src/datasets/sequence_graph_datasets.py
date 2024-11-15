@@ -5,17 +5,18 @@ import torch
 from torch_geometric.data import Dataset, Data
 
 class SequenceGraphDataset(Dataset):
-    def __init__(self, root, initial_step=0, final_step=10, max_prediction_horizon=3, transform=None, pre_transform=None):
+    def __init__(self, graph_data_dir, initial_step=0, final_step=10, max_prediction_horizon=3, transform=None, pre_transform=None):
+        self.graph_data_dir = graph_data_dir
         self.initial_step = initial_step
         self.final_step = final_step
         self.max_prediction_horizon = max_prediction_horizon
         self.sequence_length = final_step - initial_step + 1
-        super(SequenceGraphDataset, self).__init__(root, transform, pre_transform)
+        super(SequenceGraphDataset, self).__init__(graph_data_dir, transform, pre_transform)
         self.graph_paths = self._load_graph_paths()
 
     def _load_graph_paths(self):
         # Assuming the graphs are stored in directories named 'step_0', 'step_1', etc.
-        graph_dirs = [os.path.join(self.root, f'step_{i}') for i in range(self.initial_step, self.final_step + 1)]
+        graph_dirs = [os.path.join(self.graph_data_dir, f'step_{i}') for i in range(self.initial_step, self.final_step + 1)]
         graph_paths = []
 
         for dir in graph_dirs:

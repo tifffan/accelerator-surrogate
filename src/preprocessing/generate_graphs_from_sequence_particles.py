@@ -178,7 +178,7 @@ def process_data_catalog(
             graph_data.settings = settings_tensor_sample
 
             # Save the graph data to a file
-            save_dir = os.path.join(graph_data_dir, f"time_step_{t}")
+            save_dir = os.path.join(graph_data_dir, f"step_{t}")
             Path(save_dir).mkdir(parents=True, exist_ok=True)
             save_path = os.path.join(save_dir, f"graph_{unique_id}.pt")
             torch.save(graph_data, save_path)
