@@ -1,4 +1,4 @@
-# sequence_config.py
+# step_pair_config.py
 
 import argparse
 
