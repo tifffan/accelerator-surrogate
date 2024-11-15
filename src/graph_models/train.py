@@ -2,7 +2,7 @@
 
 import torch
 import torch.nn.functional as F
-from datasets import GraphDataset
+from src.datasets.datasets import GraphDataset
 from src.graph_models.models.graph_networks import (
     GraphConvolutionNetwork,
     GraphAttentionNetwork,

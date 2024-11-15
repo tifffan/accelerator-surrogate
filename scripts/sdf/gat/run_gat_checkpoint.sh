@@ -45,7 +45,7 @@ LIN_FINAL_LR=1e-5
 GAT_HEADS=4
 
 # CHECKPOINT=None
-CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/gat/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b32_lr0.0001_h256_ly6_pr1.00_ep2000_sch_lin_100_1000_1e-05_heads4/checkpoints/model-659.pth"
+CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/gat/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b32_lr0.0001_h256_ly6_pr1.00_ep2000_sch_lin_100_1000_1e-05_heads4/checkpoints/model-1079.pth"
 
 RANDOM_SEED=63
 
