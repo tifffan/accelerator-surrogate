@@ -27,7 +27,7 @@ def generate_results_folder_name(args):
     base_results_dir = os.path.join(base_results_dir, args.dataset)
 
     # Modify task to include "seq" and initial/final steps
-    task_with_steps = f"{args.task}_seq_init{args.initial_step}_final{args.final_step}"
+    task_with_steps = f"seq_init{args.initial_step}_final{args.final_step}"
     base_results_dir = os.path.join(base_results_dir, task_with_steps)
 
     # Extract important arguments to create a descriptive folder name

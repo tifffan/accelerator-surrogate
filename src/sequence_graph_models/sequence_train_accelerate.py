@@ -3,7 +3,9 @@
 import torch
 import torch.nn.functional as F
 from torch.utils.data import Subset
-from torch_geometric.loader import DataLoader
+# from torch_geometric.loader import DataLoader
+from torch.utils.data import DataLoader
+
 import numpy as np
 import logging
 import os
@@ -38,6 +40,8 @@ from sequence_utils import (
     set_random_seed
 )
 from sequence_config import parse_args
+
+from sequence_trainers_accelerate import SequenceTrainerAccelerate
 
 def is_autoencoder_model(model_name):
     """
@@ -84,9 +88,10 @@ def main():
         initial_step=args.initial_step,
         final_step=args.final_step,
         max_prediction_horizon=args.horizon,
-        task=args.task,
+        # task=args.task,
+        include_settings=args.include_settings,
         identical_settings=args.identical_settings,
-        settings_file=args.settings_file,
+        # settings_file=args.settings_file,
         use_edge_attr=use_edge_attr,
         subsample_size=args.subsample_size
     )
@@ -98,27 +103,96 @@ def main():
         indices = np.random.permutation(total_dataset_size)[:args.ntrain]
         dataset = Subset(dataset, indices)
 
-    # Flatten the dataset to get a list of (initial_graph, target_graphs, seq_length) tuples
+
+    # Create the DataLoader with the custom collate function
+    def collate_fn(batch):
+        """
+        Custom collate function for DataLoader.
+        Processes batch into initial graphs, target graphs, and sequence lengths.
+        If settings are included, also processes settings.
+        """
+        initial_graphs = []
+        target_graphs = []
+        seq_lengths = []
+        settings = []  # Initialize if settings are included
+
+        for sample in batch:
+            # Each sample is a tuple: (initial_graph, target_graph, seq_length)
+            if len(sample) == 4:
+                initial_graph, target_graph, seq_length, setting = sample
+                initial_graphs.append(initial_graph)
+                target_graphs.append(target_graph)
+                seq_lengths.append(seq_length)
+                settings.append(setting)
+            else:
+                initial_graph, target_graph, seq_length = sample
+                initial_graphs.append(initial_graph)
+                target_graphs.append(target_graph)
+                seq_lengths.append(seq_length)
+
+        # Convert seq_lengths to a tensor
+        seq_lengths = torch.tensor(seq_lengths)
+
+        # Optionally include settings
+        if settings:
+            settings = torch.stack(settings)  # Assuming settings_tensor is a tensor
+            return initial_graphs, target_graphs, seq_lengths, settings
+        else:
+            return initial_graphs, target_graphs, seq_lengths
+
+
+    # Flattening the dataset
     flattened_data = []
     for data_sequences in dataset:
         flattened_data.extend(data_sequences)
 
     # Create the DataLoader with the custom collate function
-    def collate_fn(batch):
-        initial_graphs = []
-        target_graphs_list = []
-        seq_lengths = []
-        for item in batch:
-            initial_graph, target_graphs, seq_length = item
-            initial_graphs.append(initial_graph)
-            target_graphs_list.append(target_graphs)
-            seq_lengths.append(seq_length)
-        return initial_graphs, target_graphs_list, seq_lengths
-
-    dataloader = DataLoader(flattened_data, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn)
+    dataloader = DataLoader(
+        flattened_data,
+        batch_size=args.batch_size,
+        shuffle=True,
+        collate_fn=collate_fn
+    )
+    
+    batch = next(iter(dataloader))
+    initial_graphs, target_graphs_list, seq_lengths = batch
+    logging.info(f"Initial graphs type: {type(initial_graphs)}")
+    logging.info(f"Target graphs list type: {type(target_graphs_list)}")
+    logging.info(f"Target graphs list length: {len(target_graphs_list)}")
+    logging.info(f"Sequence lengths type: {type(seq_lengths)}")
+    
+    logging.info(f"Initial graphs [0] type: {type(initial_graphs[0])}")
+    logging.info(f"Target graphs list [0] type: {type(target_graphs_list[0])}")
+    logging.info(f"Target graphs list [0] length: {len(target_graphs_list[0])}")
+    logging.info(f"Sequence lengths [0] type: {type(seq_lengths[0])}")
+    
+    for initial_graph, target_graphs, seq_length in zip(initial_graphs, target_graphs_list, seq_lengths):
+        logging.info(f"Initial graphs type: {type(initial_graphs)}")
+        logging.info(f"Target graphs list type: {type(target_graphs_list)}")
+        logging.info(f"Target graphs list length: {len(target_graphs_list)}")
+        logging.info(f"Sequence lengths type: {type(seq_lengths)}")
+    
+    
 
     # Get a sample data for model initialization
-    sample_initial_graph = flattened_data[0][0]
+    sample_initial_graph = dataset[0][0][0]
+    
+    # # Print data type and example at each level
+    # print("Data type of dataset:", type(dataset))
+    # print("Example of dataset[0]:", dataset[0])
+
+    # print("Data type of dataset[0]:", type(dataset[0])) list
+    # print("Example of dataset[0][0]:", dataset[0][0])
+
+    # print("Data type of dataset[0][0]:", type(dataset[0][0])) tuple
+    # print("Example of dataset[0][0][0]:", dataset[0][0][0])
+
+    # print("Data type of dataset[0][0][0]:", type(dataset[0][0][0])) torch_geometric.data.data.Data
+    # print("Example of dataset[0][0][0].x:", dataset[0][0][0].x)
+    
+    
+    # print("Type of sample_initial_graph:", type(sample_initial_graph))
+    
     in_channels = sample_initial_graph.x.shape[1]
     out_channels = sample_initial_graph.x.shape[1]  # Assuming node features remain the same
 
@@ -150,8 +224,6 @@ def main():
     criterion = torch.nn.MSELoss()
 
     # Initialize trainer with the loss function
-    from sequence_trainer_accelerate import SequenceTrainerAccelerate
-
     trainer = SequenceTrainerAccelerate(
         model=model,
         dataloader=dataloader,

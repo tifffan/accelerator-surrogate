@@ -1,24 +1,34 @@
 #!/bin/bash
-#SBATCH --account=ad:beamphysics
-#SBATCH --partition=ampere
-#SBATCH --job-name=seq_train
-#SBATCH --output=logs/sequence_train_%j.out
-#SBATCH --error=logs/sequence_train_%j.err
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=4
-#SBATCH --gpus-per-node=4       # Adjust based on your needs
-#SBATCH --nodes=4
-#SBATCH --mem-per-cpu=32G
-#SBATCH --time=10:30:00
+#SBATCH -A m669
+#SBATCH -C gpu
+#SBATCH -q regular
+#SBATCH -t 10:30:00
+#SBATCH --nodes=8
+#SBATCH --ntasks-per-node=1
+#SBATCH --gpus-per-node=4
+#SBATCH --cpus-per-task=128
+#SBATCH --output=logs/train_mgn_accelerate_%j.out
+#SBATCH --error=logs/train_mgn_accelerate_%j.err
+
+# Bind CPUs to cores for optimal performance
+export SLURM_CPU_BIND="cores"
+
+# Load necessary modules
+module load conda
+module load cudatoolkit
+module load pytorch/2.3.1
+
+# Activate the conda environment
+source activate ignn
 
 # Set the PYTHONPATH to include your project directory
-export PYTHONPATH=/sdf/home/t/tiffan/repo/accelerator-surrogate
+export PYTHONPATH=/global/homes/t/tiffan/repo/accelerator-surrogate
 
 # Print the PYTHONPATH for debugging purposes
 echo "PYTHONPATH is set to: $PYTHONPATH"
 
 # Navigate to the project directory
-cd $PYTHONPATH
+cd /global/homes/t/tiffan/repo/accelerator-surrogate
 
 # Record the start time
 start_time=$(date +%s)
@@ -30,37 +40,38 @@ echo "Start time: $(date)"
 
 BASE_DATA_DIR="/pscratch/sd/t/tiffan/data/"
 BASE_RESULTS_DIR="/global/cfs/cdirs/m669/tiffan/results/"
-SETTINGS_FILE="/pscratch/sd/t/tiffan/data/sequence_particles_data_archive_4/settings.pt"
+SETTINGS_FILE="/pscratch/sd/t/tiffan/data/sequence_graph_data_archive_4/settings.pt"
 IDENTICAL_SETTINGS="--identical_settings"
 
-MODEL="gcn"
+MODEL="mgn"
 DATASET="sequence_graph_data_archive_4"
-DATA_KEYWORD="knn_edges_k5_weighted"
+DATA_KEYWORD="knn_k5_weighted"
 TASK="predict_n6d"
 MODE="train"
+
 INITIAL_STEP=0
 FINAL_STEP=1
 
-NTRAIN=100
-NEPOCHS=1
-BATCH_SIZE=64
+NTRAIN=4156
+NEPOCHS=2000
+BATCH_SIZE=32
 HIDDEN_DIM=256
 NUM_LAYERS=6
 POOL_RATIOS=1.0
-VERBOSE="--verbose"
+# VERBOSE="--verbose"
 
 # Learning rate scheduler parameters
 LR=1e-4
 LR_SCHEDULER="lin"
 LIN_START_EPOCH=100
 LIN_END_EPOCH=1000
-LIN_FINAL_LR=1e-6
+LIN_FINAL_LR=1e-5
 
 # =============================================================================
 # Construct the Python Command with All Required Arguments
 # =============================================================================
 
-python_command="src/graph_models/sequence_train_accelerate.py \
+python_command="src/graph_models/step_pair_train_accelerate.py \
     --model $MODEL \
     --dataset $DATASET \
     --task $TASK \
@@ -90,7 +101,7 @@ echo "Running command: $python_command"
 # Set master address and port for distributed training
 export MASTER_ADDR=$(hostname)
 export MASTER_PORT=29500  # You can choose any free port
-export OMP_NUM_THREADS=16  # Adjust as needed
+export OMP_NUM_THREADS=32  # Adjust as needed
 
 # Check if sequence_train.py supports accelerate
 # If it does, use accelerate launch; otherwise, run the script directly
