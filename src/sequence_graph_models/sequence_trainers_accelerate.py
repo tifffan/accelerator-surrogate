@@ -6,7 +6,7 @@ from torch_geometric.data import Data
 import logging
 import os
 
-from trainers import BaseTrainer
+from src.graph_models.trainers_accelerate import BaseTrainer
 
 class SequenceTrainerAccelerate(BaseTrainer):
     def __init__(self, **kwargs):
@@ -24,37 +24,33 @@ class SequenceTrainerAccelerate(BaseTrainer):
         logging.info(f"Using discount factor: {self.discount_factor}")
         
     def train_step(self, batch):
-        initial_graphs, target_graphs_list, seq_lengths = batch
+        """
+        Perform one training step with discounted loss.
+        """
+        # if self.include_settings:
+        #     initial_graphs, target_graphs, seq_lengths, settings = batch
+        # else: TODO: add settings?
+        initial_graphs, target_graphs, seq_lengths = batch
+
+        total_loss = 0
         batch_size = len(initial_graphs)
-        loss = 0
 
-        for i in range(batch_size):
-            initial_graph = initial_graphs[i]
-            target_graphs = target_graphs_list[i]
-            seq_length = seq_lengths[i]
+        for initial_graph, target_graph, seq_length in zip(initial_graphs, target_graphs, seq_lengths):
+            # Perform forward pass
+            prediction = self.model_forward(initial_graph)
 
-            # Initialize prediction with the initial graph
-            prediction = initial_graph.x
+            # Compute loss for the current step
+            step_loss = self.criterion(prediction, target_graph.x)
 
-            # Iterate over prediction horizon
-            for k, target_graph in enumerate(target_graphs, start=1):
-                # Apply the model to get the next prediction
-                data_input = Data(x=prediction, edge_index=initial_graph.edge_index, batch=initial_graph.batch)
-                prediction = self.model_forward(data_input)
+            # Apply discount factor
+            # Assuming k = 0 since each target_graph corresponds to a specific step
+            # Modify if multiple steps per target_graph are needed
+            discounted_loss = (self.discount_factor ** (seq_length)) * step_loss
 
-                # Compute loss between prediction and target
-                step_loss = self.criterion(prediction, target_graph.x)
+            # Accumulate loss
+            total_loss += discounted_loss / batch_size  # Normalize by batch size
 
-                # Apply discount factor
-                discounted_loss = (self.discount_factor ** (seq_length - k)) * step_loss
-
-                # Accumulate loss
-                loss += discounted_loss / batch_size  # Normalize by batch size
-
-                # Optional: Update initial_graph if graph structure changes
-                # initial_graph = target_graph  # Uncomment if needed
-
-        return loss
+        return total_loss
 
     def model_forward(self, data):
         """

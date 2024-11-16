@@ -17,13 +17,15 @@ def parse_args():
     parser.add_argument('--base_results_dir', type=str, default="/sdf/data/ad/ard/u/tiffan/results/",
                         help="Base directory where the results are stored.")
     parser.add_argument('--dataset', type=str, required=True, help="Dataset identifier.")
-    parser.add_argument('--task', type=str, required=True, choices=['predict_n6d', 'predict_n4d', 'predict_n2d'],
-                        help="Task to perform.")
+    # parser.add_argument('--task', type=str, required=True, choices=['predict_n6d', 'predict_n4d', 'predict_n2d'],
+    #                     help="Task to perform.")
     parser.add_argument('--initial_step', type=int, required=True, help="Index of the initial sequence step.")
     parser.add_argument('--final_step', type=int, required=True, help="Index of the final sequence step.")
+    parser.add_argument('--include_settings', action='store_true',
+                        help="Flag indicating whether settings are included in the dataset, concatenated with node feature.")
     parser.add_argument('--identical_settings', action='store_true',
                         help="Flag indicating whether settings are identical across samples.")
-    parser.add_argument('--settings_file', type=str, help="Path to the settings file when identical_settings is True.")
+    # parser.add_argument('--settings_file', type=str, help="Path to the settings file when identical_settings is True.")
     parser.add_argument('--ntrain', type=int, default=None, help="Number of training examples to use.")
     parser.add_argument('--nepochs', type=int, default=100, help="Number of training epochs.")
     parser.add_argument('--save_checkpoint_every', type=int, default=10, help="Save checkpoint every N epochs.")

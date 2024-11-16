@@ -7,6 +7,7 @@ from torch_geometric.data import Data
 import logging
 import glob
 import re
+import os
 
 
 class GraphDataset(Dataset):
@@ -139,8 +140,8 @@ class StepPairGraphDataset(Dataset):
         self.use_edge_attr = use_edge_attr
 
         # Build file paths for initial and final graphs
-        initial_graph_dir = os.path.join(graph_data_dir, f"sequence_step_{initial_step}")
-        final_graph_dir = os.path.join(graph_data_dir, f"sequence_step_{final_step}")
+        initial_graph_dir = os.path.join(graph_data_dir, f"step_{initial_step}")
+        final_graph_dir = os.path.join(graph_data_dir, f"step_{final_step}")
 
         # Function to extract the graph number from filenames
         def extract_graph_number(filepath):
@@ -176,7 +177,7 @@ class StepPairGraphDataset(Dataset):
             self.settings = torch.load(settings_file)
         else:
             # Load settings per sample if necessary
-            self.settings_files = [f.replace(f"sequence_step_{initial_step}", "settings").replace('graph_', 'settings_') for f in self.initial_graph_files]
+            self.settings_files = [f.replace(f"step_{initial_step}", "settings").replace('graph_', 'settings_') for f in self.initial_graph_files]
             if subsample_size is not None:
                 self.settings_files = self.settings_files[:subsample_size]
             if not all(os.path.isfile(f) for f in self.settings_files):
