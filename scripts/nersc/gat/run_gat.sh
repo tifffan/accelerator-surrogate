@@ -3,7 +3,7 @@
 #SBATCH -C gpu
 #SBATCH -q regular
 #SBATCH -t 4:30:00
-#SBATCH --nodes=2
+#SBATCH --nodes=8
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
 #SBATCH --cpus-per-task=128
@@ -56,7 +56,7 @@ GAT_HEADS=4
 # CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/gat/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b32_lr0.0001_h256_ly6_pr1.00_ep2000_sch_lin_100_1000_1e-05/checkpoints/model-1909.pth"
 RANDOM_SEED=63
 
-python_command="python src/graph_models/train.py \
+python_command="src/graph_models/train_accelerate.py \
     --model $MODEL \
     --dataset $DATASET \
     --task $TASK \
@@ -83,7 +83,7 @@ echo "Running command: $python_command"
 # Set master address and port for distributed training
 export MASTER_ADDR=$(hostname)
 export MASTER_PORT=29500  # You can choose any free port
-export OMP_NUM_THREADS=8  # Adjust as needed
+export OMP_NUM_THREADS=32  # Adjust as needed
 
 # Use accelerate launch with srun
 srun -l bash -c "
