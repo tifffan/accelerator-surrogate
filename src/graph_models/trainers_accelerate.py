@@ -114,7 +114,8 @@ class BaseTrainer:
                 total_loss += loss.item()
                 if self.verbose and self.accelerator.is_main_process:
                     progress_bar.set_postfix(loss=total_loss / len(self.dataloader))
-
+                    
+            self.accelerator.wait_for_everyone()
             # Scheduler step
             if self.scheduler:
                 self.scheduler.step()

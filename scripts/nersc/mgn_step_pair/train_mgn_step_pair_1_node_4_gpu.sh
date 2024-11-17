@@ -2,13 +2,13 @@
 #SBATCH -A m669
 #SBATCH -C gpu
 #SBATCH -q regular
-#SBATCH -t 10:30:00
-#SBATCH --nodes=8
+#SBATCH -t 5:30:00
+#SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gpus-per-node=4
+#SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=128
-#SBATCH --output=logs/train_mgn_accelerate_%j.out
-#SBATCH --error=logs/train_mgn_accelerate_%j.err
+#SBATCH --output=logs/train_mgn_accelerate_1_4_%j.out
+#SBATCH --error=logs/train_mgn_accelerate_1_4_%j.err
 
 # Bind CPUs to cores for optimal performance
 export SLURM_CPU_BIND="cores"
@@ -53,7 +53,7 @@ INITIAL_STEP=0
 FINAL_STEP=1
 
 NTRAIN=4156
-NEPOCHS=2000
+NEPOCHS=3000
 BATCH_SIZE=32
 HIDDEN_DIM=256
 NUM_LAYERS=6
@@ -66,6 +66,9 @@ LR_SCHEDULER="lin"
 LIN_START_EPOCH=100
 LIN_END_EPOCH=1000
 LIN_FINAL_LR=1e-5
+
+# Random seed
+RANDOM_SEED=63
 
 # =============================================================================
 # Construct the Python Command with All Required Arguments
@@ -85,6 +88,11 @@ python_command="src/graph_models/step_pair_train_accelerate.py \
     --ntrain $NTRAIN \
     --nepochs $NEPOCHS \
     --lr $LR \
+    --lr_scheduler $LR_SCHEDULER \
+    --lin_start_epoch $LIN_START_EPOCH \
+    --lin_end_epoch $LIN_END_EPOCH \
+    --lin_final_lr $LIN_FINAL_LR \
+    --random_seed $RANDOM_SEED \
     --batch_size $BATCH_SIZE \
     --hidden_dim $HIDDEN_DIM \
     --num_layers $NUM_LAYERS \
@@ -101,7 +109,7 @@ echo "Running command: $python_command"
 # Set master address and port for distributed training
 export MASTER_ADDR=$(hostname)
 export MASTER_PORT=29500  # You can choose any free port
-export OMP_NUM_THREADS=32  # Adjust as needed
+export OMP_NUM_THREADS=4  # Adjust as needed
 
 # Check if sequence_train.py supports accelerate
 # If it does, use accelerate launch; otherwise, run the script directly
