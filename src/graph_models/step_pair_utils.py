@@ -18,7 +18,11 @@ def generate_results_folder_name(args):
     base_results_dir = os.path.join(base_results_dir, args.dataset)
 
     # Modify task to include initial and final steps
-    task_with_steps = f"{args.task}_init{args.initial_step}_final{args.final_step}"
+    if args.use_settings:
+        task_str = args.task + '_use_settings'
+    else:
+        task_str = args.task
+    task_with_steps = f"{task_str}_init{args.initial_step}_final{args.final_step}"
     base_results_dir = os.path.join(base_results_dir, task_with_steps)
 
     # Extract important arguments
