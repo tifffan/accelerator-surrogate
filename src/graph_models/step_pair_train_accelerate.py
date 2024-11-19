@@ -90,6 +90,7 @@ if __name__ == "__main__":
         initial_step=args.initial_step,
         final_step=args.final_step,
         task=args.task,
+        use_settings=args.use_settings,
         identical_settings=args.identical_settings,
         settings_file=args.settings_file,
         use_edge_attr=use_edge_attr,

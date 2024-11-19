@@ -21,6 +21,8 @@ def parse_args():
                         help="Task to perform.")
     parser.add_argument('--initial_step', type=int, required=True, help="Index of the initial sequence step.")
     parser.add_argument('--final_step', type=int, required=True, help="Index of the final sequence step.")
+    parser.add_argument('--use_settings', action='store_true',
+                        help="Flag indicating whether settings are concatenated to node features.")
     parser.add_argument('--identical_settings', action='store_true',
                         help="Flag indicating whether settings are identical across samples.")
     parser.add_argument('--settings_file', type=str, help="Path to the settings file when identical_settings is True.")

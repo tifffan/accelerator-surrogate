@@ -118,7 +118,7 @@ class GraphDataset(Dataset):
         return initial_data
 
 class StepPairGraphDataset(Dataset):
-    def __init__(self, graph_data_dir, initial_step, final_step, task='predict_n6d',
+    def __init__(self, graph_data_dir, initial_step, final_step, task='predict_n6d', use_settings=False,
                  identical_settings=False, settings_file=None, use_edge_attr=False, subsample_size=None):
         """
         Args:
@@ -135,6 +135,7 @@ class StepPairGraphDataset(Dataset):
         self.initial_step = initial_step
         self.final_step = final_step
         self.task = task
+        self.use_settings = use_settings
         self.identical_settings = identical_settings
         self.settings_file = settings_file
         self.use_edge_attr = use_edge_attr
@@ -171,17 +172,18 @@ class StepPairGraphDataset(Dataset):
             raise ValueError("Mismatch in number of initial and final graph files.")
 
         # Load settings if identical
-        if self.identical_settings:
-            if settings_file is None:
-                raise ValueError("Settings file must be provided when identical_settings is True.")
-            self.settings = torch.load(settings_file)
-        else:
-            # Load settings per sample if necessary
-            self.settings_files = [f.replace(f"step_{initial_step}", "settings").replace('graph_', 'settings_') for f in self.initial_graph_files]
-            if subsample_size is not None:
-                self.settings_files = self.settings_files[:subsample_size]
-            if not all(os.path.isfile(f) for f in self.settings_files):
-                raise ValueError("Some settings files are missing.")
+        if self.use_settings:
+            if self.identical_settings:
+                if settings_file is None:
+                    raise ValueError("Settings file must be provided when identical_settings is True.")
+                self.settings = torch.load(settings_file)
+            else:
+                # Load settings per sample if necessary
+                self.settings_files = [f.replace(f"step_{initial_step}", "settings").replace('graph_', 'settings_') for f in self.initial_graph_files]
+                if subsample_size is not None:
+                    self.settings_files = self.settings_files[:subsample_size]
+                if not all(os.path.isfile(f) for f in self.settings_files):
+                    raise ValueError("Some settings files are missing.")
 
         logging.info(f"Initialized SequenceGraphDataset with {len(self)} samples.")
 
@@ -194,17 +196,17 @@ class StepPairGraphDataset(Dataset):
         # Load final graph
         final_graph = torch.load(self.final_graph_files[idx])
 
-        # Load settings
-        if self.identical_settings:
-            settings = self.settings
-        else:
-            settings = torch.load(self.settings_files[idx])
-
-        # Optionally concatenate settings to node features (commented out)
-        # Uncomment and modify if you wish to include settings
-        # num_nodes = initial_graph.num_nodes
-        # settings_expanded = settings.unsqueeze(0).expand(num_nodes, -1)  # Shape: [num_nodes, num_settings]
-        # initial_graph.x = torch.cat([initial_graph.x, settings_expanded], dim=1)  # New shape: [num_nodes, original_x_dim + num_settings]
+        # Optionally concatenate settings to node features
+        if self.use_settings:
+            # Load settings
+            if self.identical_settings:
+                settings = self.settings
+            else:
+                settings = torch.load(self.settings_files[idx])
+            
+            num_nodes = initial_graph.num_nodes
+            settings_expanded = settings.unsqueeze(0).expand(num_nodes, -1)  # Shape: [num_nodes, num_settings]
+            initial_graph.x = torch.cat([initial_graph.x, settings_expanded], dim=1)  # New shape: [num_nodes, original_x_dim + num_settings]
 
         # Extract positions (assuming the first 3 features are x, y, z coordinates)
         initial_graph.pos = initial_graph.x[:, :3]  # Shape: [num_nodes, 3]
