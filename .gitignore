@@ -5,6 +5,9 @@ data/*.h5
 *.out
 *.err
 
+# simulation byproducts
+src/simulations/rotate_gaussian_identical_settings_low_total_charge/dump_FACET_CNSGA.yaml
+
 # model checkpoints
 log/classification/**/checkpoints/best_model.pth
 log/segmentation/**/checkpoints/best_model.pth
