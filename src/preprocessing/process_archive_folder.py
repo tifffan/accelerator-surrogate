@@ -30,7 +30,7 @@ def calc_N(file):
 def process_archive_folder(data_dir, output_file):
     files = glob.glob(os.path.join(data_dir, '*'))
     files = [f for f in files if os.path.isfile(f)]
-
+    
     valid_files_n241_match = []
     total_files = len(files)
 
@@ -54,3 +54,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     process_archive_folder(args.archive_dir, args.output_file)
+    

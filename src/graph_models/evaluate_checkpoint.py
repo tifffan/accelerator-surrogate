@@ -191,6 +191,31 @@ def compute_normalized_emittance_x(particle_group):
     norm_emit_x = np.sqrt(mean_x2 * mean_px2 - mean_xpx**2)
     return norm_emit_x
 
+def compute_normalized_emittance_y(particle_group):
+    """
+    Computes the normalized emittance in y direction for a ParticleGroup.
+    """
+    y = particle_group['y']
+    py = particle_group['py']
+    mean_y2 = np.mean(y**2)
+    mean_py2 = np.mean(py**2)
+    mean_ypy = np.mean(y * py)
+    norm_emit_y = np.sqrt(mean_y2 * mean_py2 - mean_ypy**2)
+    return norm_emit_y
+
+def compute_normalized_emittance_z(particle_group):
+    """
+    Computes the normalized emittance in z direction for a ParticleGroup.
+    """
+    z = particle_group['z']
+    pz = particle_group['pz']
+    mean_z2 = np.mean(z**2)
+    mean_pz2 = np.mean(pz**2)
+    mean_zpz = np.mean(z * pz)
+    norm_emit_z = np.sqrt(mean_z2 * mean_pz2 - mean_zpz**2)
+    return norm_emit_z
+
+
 def plot_particle_groups(pred_pg, target_pg, idx, error_type, results_folder):
     """
     Plots and saves figures for predicted and target ParticleGroups.
@@ -584,11 +609,75 @@ def initialize_model(hyperparams, sample):
 
         return model
 
+# def evaluate_model(model, dataloader, device, metadata_final_path, results_folder):
+#     model.eval()
+#     all_errors = []
+#     all_predictions = []
+#     all_targets = []
+#     with torch.no_grad():
+#         for data in tqdm(dataloader, desc="Evaluating Model"):
+#             data = data.to(device)
+#             x_pred = model_forward(model, data)
+#             mse = F.mse_loss(x_pred, data.y, reduction='none').mean(dim=1)
+#             batch_indices = data.batch.cpu().numpy()
+#             graph_indices = np.unique(batch_indices)
+#             for idx in graph_indices:
+#                 mask = (batch_indices == idx)
+#                 graph_mse = mse[mask].mean().item()
+#                 all_errors.append(graph_mse)
+#                 all_predictions.append(x_pred[mask].cpu())
+#                 all_targets.append(data.y[mask].cpu())
+#     all_errors = np.array(all_errors)
+#     sorted_indices = np.argsort(all_errors)
+#     min_mse_indices = sorted_indices[:5]
+#     max_mse_indices = sorted_indices[-5:]
+
+#     global_mean, global_std = load_global_statistics(metadata_final_path)
+
+#     def inverse_normalize(normalized_data):
+#         return normalized_data * global_std + global_mean
+
+#     # For min MSE samples
+#     for idx in min_mse_indices:
+#         pred = all_predictions[idx]
+#         target = all_targets[idx]
+#         pred_original = inverse_normalize(pred)
+#         target_original = inverse_normalize(target)
+#         pred_pg = transform_to_particle_group(pred_original)
+#         target_pg = transform_to_particle_group(target_original)
+#         plot_particle_groups(pred_pg, target_pg, idx, 'min', results_folder)
+#         pred_norm_emit_x = compute_normalized_emittance_x(pred_pg)
+#         target_norm_emit_x = compute_normalized_emittance_x(target_pg)
+#         relative_error = abs(pred_norm_emit_x - target_norm_emit_x) / abs(target_norm_emit_x)
+#         print(f"Sample {idx} (min MSE): Relative Error in norm_emit_x: {relative_error}")
+
+#     # For max MSE samples
+#     for idx in max_mse_indices:
+#         pred = all_predictions[idx]
+#         target = all_targets[idx]
+#         pred_original = inverse_normalize(pred)
+#         target_original = inverse_normalize(target)
+#         pred_pg = transform_to_particle_group(pred_original)
+#         target_pg = transform_to_particle_group(target_original)
+#         plot_particle_groups(pred_pg, target_pg, idx, 'max', results_folder)
+#         pred_norm_emit_x = compute_normalized_emittance_x(pred_pg)
+#         target_norm_emit_x = compute_normalized_emittance_x(target_pg)
+#         relative_error = abs(pred_norm_emit_x - target_norm_emit_x) / abs(target_norm_emit_x)
+#         print(f"Sample {idx} (max MSE): Relative Error in norm_emit_x: {relative_error}")
+
+#     # Compute overall test error
+#     test_error = all_errors.mean()
+#     print(f"Test Error (MSE): {test_error}")
+
 def evaluate_model(model, dataloader, device, metadata_final_path, results_folder):
     model.eval()
     all_errors = []
     all_predictions = []
     all_targets = []
+    all_relative_errors_x = []
+    all_relative_errors_y = []
+    all_relative_errors_z = []
+    
     with torch.no_grad():
         for data in tqdm(dataloader, desc="Evaluating Model"):
             data = data.to(device)
@@ -602,47 +691,46 @@ def evaluate_model(model, dataloader, device, metadata_final_path, results_folde
                 all_errors.append(graph_mse)
                 all_predictions.append(x_pred[mask].cpu())
                 all_targets.append(data.y[mask].cpu())
+    
     all_errors = np.array(all_errors)
-    sorted_indices = np.argsort(all_errors)
-    min_mse_indices = sorted_indices[:5]
-    max_mse_indices = sorted_indices[-5:]
-
     global_mean, global_std = load_global_statistics(metadata_final_path)
 
     def inverse_normalize(normalized_data):
         return normalized_data * global_std + global_mean
 
-    # For min MSE samples
-    for idx in min_mse_indices:
-        pred = all_predictions[idx]
-        target = all_targets[idx]
+    for pred, target in zip(all_predictions, all_targets):
         pred_original = inverse_normalize(pred)
         target_original = inverse_normalize(target)
+        
         pred_pg = transform_to_particle_group(pred_original)
         target_pg = transform_to_particle_group(target_original)
-        plot_particle_groups(pred_pg, target_pg, idx, 'min', results_folder)
+        
         pred_norm_emit_x = compute_normalized_emittance_x(pred_pg)
         target_norm_emit_x = compute_normalized_emittance_x(target_pg)
-        relative_error = abs(pred_norm_emit_x - target_norm_emit_x) / abs(target_norm_emit_x)
-        print(f"Sample {idx} (min MSE): Relative Error in norm_emit_x: {relative_error}")
+        relative_error_x = abs(pred_norm_emit_x - target_norm_emit_x) / abs(target_norm_emit_x)
+        all_relative_errors_x.append(relative_error_x)
 
-    # For max MSE samples
-    for idx in max_mse_indices:
-        pred = all_predictions[idx]
-        target = all_targets[idx]
-        pred_original = inverse_normalize(pred)
-        target_original = inverse_normalize(target)
-        pred_pg = transform_to_particle_group(pred_original)
-        target_pg = transform_to_particle_group(target_original)
-        plot_particle_groups(pred_pg, target_pg, idx, 'max', results_folder)
-        pred_norm_emit_x = compute_normalized_emittance_x(pred_pg)
-        target_norm_emit_x = compute_normalized_emittance_x(target_pg)
-        relative_error = abs(pred_norm_emit_x - target_norm_emit_x) / abs(target_norm_emit_x)
-        print(f"Sample {idx} (max MSE): Relative Error in norm_emit_x: {relative_error}")
+        # Compute norm emittance y
+        pred_norm_emit_y = compute_normalized_emittance_y(pred_pg)
+        target_norm_emit_y = compute_normalized_emittance_y(target_pg)
+        relative_error_y = abs(pred_norm_emit_y - target_norm_emit_y) / abs(target_norm_emit_y)
+        all_relative_errors_y.append(relative_error_y)
 
-    # Compute overall test error
-    test_error = all_errors.mean()
-    print(f"Test Error (MSE): {test_error}")
+        # Compute norm emittance z
+        pred_norm_emit_z = compute_normalized_emittance_z(pred_pg)
+        target_norm_emit_z = compute_normalized_emittance_z(target_pg)
+        relative_error_z = abs(pred_norm_emit_z - target_norm_emit_z) / abs(target_norm_emit_z)
+        all_relative_errors_z.append(relative_error_z)
+    
+    # Compute overall average relative errors
+    avg_relative_error_x = np.mean(all_relative_errors_x)
+    avg_relative_error_y = np.mean(all_relative_errors_y)
+    avg_relative_error_z = np.mean(all_relative_errors_z)
+    
+    logging.info(f"Average Relative Error in norm_emittance_x: {avg_relative_error_x:.4f}")
+    logging.info(f"Average Relative Error in norm_emittance_y: {avg_relative_error_y:.4f}")
+    logging.info(f"Average Relative Error in norm_emittance_z: {avg_relative_error_z:.4f}")
+
 
 def model_forward(model, data):
     """
