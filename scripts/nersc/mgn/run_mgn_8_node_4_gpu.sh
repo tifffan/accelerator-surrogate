@@ -1,12 +1,12 @@
 #!/bin/bash
 #SBATCH -A m669
 #SBATCH -C gpu
-#SBATCH -q debug
-#SBATCH -t 0:30:00
+#SBATCH -q regular
+#SBATCH -t 33:30:00
 #SBATCH --nodes=8
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
-#SBATCH --cpus-per-task=128
+#SBATCH --cpus-per-task=64
 #SBATCH --output=logs/run_mgn_8_node_4_gpu_%j.out
 #SBATCH --error=logs/run_mgn_8_node_4_gpu_%j.err
 
@@ -101,7 +101,7 @@ echo "Running command: $python_command"
 # Set master address and port for distributed training
 export MASTER_ADDR=$(hostname)
 export MASTER_PORT=29500  # You can choose any free port
-export OMP_NUM_THREADS=128  # Adjust as needed
+export OMP_NUM_THREADS=64  # Adjust as needed
 
 # Use accelerate launch with srun
 srun -l bash -c "
