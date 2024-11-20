@@ -84,9 +84,6 @@ if __name__ == "__main__":
     else:
         results_folder = generate_results_folder_name(args)
     logging.info(f"Results will be saved to {results_folder}")
-    
-    # Log results folder to WandB
-    wandb.config.update({"results_folder": results_folder})
 
     # Set random seed
     set_random_seed(args.random_seed)
@@ -525,9 +522,6 @@ if __name__ == "__main__":
 
     model.to(device)
     logging.info(f"Model moved to {device}.")
-    
-    # Log model architecture to WandB
-    wandb.watch(model, log="all", log_freq=10)
 
     # Optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
