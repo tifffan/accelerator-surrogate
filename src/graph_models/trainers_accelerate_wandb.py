@@ -91,6 +91,10 @@ class BaseTrainer:
         
         # Initialize WandB only if main process
         self.init_wandb(kwargs.get("wandb_config", None))
+        
+        # Watch the model if WandB is enabled
+        if self.wandb_logger:
+            self.wandb_watch_model()
 
         # Prepare the model, optimizer, scheduler, and dataloader
         if self.scheduler:
@@ -109,12 +113,22 @@ class BaseTrainer:
                 config=wandb_config.get("config", {}),
                 name=wandb_config.get("name", "default-run"),
             )
-            self.wandb_logger.config.update({"results_folder": str(self.results_folder)})
-        # Wait for all processes to synchronize before proceeding
-        self.accelerator.wait_for_everyone()
+            self.wandb_logger.config.update({"results_folder": str(self.results_folder)}, allow_val_change=True)
+    
+    def wandb_watch_model(self):
+        """Watch the model using WandB."""
+        if self.wandb_logger:
+            import wandb
+            wandb.watch(
+                self.model,
+                log="all",  # Log gradients and parameter updates
+                log_freq=100  # Adjust log frequency as needed
+            )
+            logging.info("WandB is now watching the model for gradients and parameter updates.")
     
     def train(self):
         logging.info("Starting training...")
+        self.accelerator.wait_for_everyone()
         for epoch in range(self.start_epoch, self.nepochs):
             self.model.train()
             total_loss = 0
