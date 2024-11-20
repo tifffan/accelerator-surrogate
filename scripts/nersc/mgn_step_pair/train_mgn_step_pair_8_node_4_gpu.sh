@@ -6,7 +6,7 @@
 #SBATCH --nodes=8
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
-#SBATCH --cpus-per-task=128
+#SBATCH --cpus-per-task=64
 #SBATCH --output=logs/train_mgn_accelerate_8_4_%j.out
 #SBATCH --error=logs/train_mgn_accelerate_8_4_%j.err
 
@@ -49,7 +49,7 @@ DATA_KEYWORD="knn_k5_weighted"
 TASK="predict_n6d"
 MODE="train"
 
-INITIAL_STEP=0
+INITIAL_STEP=5
 FINAL_STEP=76
 
 NTRAIN=4156
@@ -115,7 +115,7 @@ echo "Running command: $python_command"
 # Set master address and port for distributed training
 export MASTER_ADDR=$(hostname)
 export MASTER_PORT=29500  # You can choose any free port
-export OMP_NUM_THREADS=32  # Adjust as needed
+export OMP_NUM_THREADS=64  # Adjust as needed
 
 # Check if sequence_train.py supports accelerate
 # If it does, use accelerate launch; otherwise, run the script directly
