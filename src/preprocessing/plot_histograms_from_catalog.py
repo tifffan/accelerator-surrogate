@@ -10,7 +10,7 @@ def is_nan(value):
     return isinstance(value, (float, int, np.float64, np.int64)) and np.isnan(value)
 
 # Function to extract data from a .h5 file using the Impact class
-def extract_data_from_h5(file):
+def extract_data_from_h5(file, default_total_charge=0.5e-9):
     try:
         # Load the HDF5 file using Impact
         I = Impact.from_archive(file)
@@ -51,9 +51,9 @@ def extract_data_from_h5(file):
             settings['distgen:total_charge'] = I['distgen:total_charge']
             # Set total charge to 1e-9 if it's None
             if settings['distgen:total_charge'] is None:
-                settings['distgen:total_charge'] = 1e-9
+                settings['distgen:total_charge'] = default_total_charge
         except KeyError:
-            settings['distgen:total_charge'] = 1e-9
+            settings['distgen:total_charge'] = default_total_charge
 
         return norm_emit_x, norm_emit_y, norm_emit_z, settings
     
@@ -62,7 +62,7 @@ def extract_data_from_h5(file):
         return float('NaN'), float('NaN'), float('NaN'), {}
 
 # Function to plot histograms and create a cleaned catalog CSV file
-def plot_histograms_and_clean_catalog(catalog_file, output_dir, cleaned_catalog_file):
+def plot_histograms_and_clean_catalog(catalog_file, output_dir, cleaned_catalog_file, default_total_charge):
     # Load the catalog CSV
     df = pd.read_csv(catalog_file)
 
@@ -83,7 +83,7 @@ def plot_histograms_and_clean_catalog(catalog_file, output_dir, cleaned_catalog_
     # Loop through each file in the catalog
     for index, row in df.iterrows():
         file = row['filename']
-        norm_emit_x, norm_emit_y, norm_emit_z, settings = extract_data_from_h5(file)
+        norm_emit_x, norm_emit_y, norm_emit_z, settings = extract_data_from_h5(file, default_total_charge)
 
         # Print a message every 10 files processed
         if (index + 1) % 10 == 0:
@@ -156,8 +156,9 @@ if __name__ == "__main__":
     parser.add_argument('--catalog_file', type=str, help="Path to the catalog CSV file")
     parser.add_argument('--output_dir', type=str, help="Directory where the plot will be saved")
     parser.add_argument('--cleaned_catalog_file', type=str, help="Output file for the cleaned catalog CSV")
+    parser.add_argument('--default_total_charge', type=float, help="Default value for distgen:total_charge")
 
     args = parser.parse_args()
 
     # Plot histograms and create cleaned catalog using the provided catalog file, output directory, and cleaned catalog file
-    plot_histograms_and_clean_catalog(args.catalog_file, args.output_dir, args.cleaned_catalog_file)
+    plot_histograms_and_clean_catalog(args.catalog_file, args.output_dir, args.cleaned_catalog_file, args.default_total_charge)
