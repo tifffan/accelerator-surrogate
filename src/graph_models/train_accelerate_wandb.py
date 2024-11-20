@@ -37,7 +37,6 @@ import numpy as np
 import logging
 import re
 import os
-import wandb
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -57,11 +56,12 @@ def is_autoencoder_model(model_name):
 if __name__ == "__main__":
     args = parse_args()
     
-    wandb.init(
-        project="accelerator-graph-surrogate",  # Replace with your WandB project name
-        config=args,  # Automatically logs argparse arguments
-        name=args.results_folder,  # Use results folder as run name
-    )
+    # Prepare WandB config
+    wandb_config = {
+        "project": "graph-training",
+        "config": vars(args),
+        "name": args.results_folder,
+    }
 
     # Set device
     if args.cpu_only:
@@ -574,7 +574,7 @@ if __name__ == "__main__":
         device=device,
         verbose=args.verbose,
         criterion=criterion,
-        wandb_logger=wandb  # Pass WandB for logging metrics
+        wandb_config=wandb_config,  # Pass WandB config to the trainer
     )
     logging.info("Initialized GraphPredictionTrainer with custom loss function.")
     
@@ -584,16 +584,10 @@ if __name__ == "__main__":
     # Run train or evaluate
     if args.mode == 'train':
         trainer.train()
-        
-        # Save the final model checkpoint to WandB
-        final_model_path = os.path.join(results_folder, "final_model.pth")
-        torch.save(model.state_dict(), final_model_path)
-        wandb.save(final_model_path)  # Upload to WandB
-
     else:
         # Implement evaluation if needed
         logging.info("Evaluation mode is not implemented yet.")
         pass
     
-    # Finish WandB run
-    wandb.finish()
+    trainer.finalize()  # Finalize WandB after training
+    

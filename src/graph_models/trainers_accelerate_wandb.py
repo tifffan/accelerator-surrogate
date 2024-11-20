@@ -57,19 +57,18 @@ class BaseTrainer:
         # Initialize the accelerator
         self.accelerator = Accelerator()
         
-        # WandB logger
-        self.wandb_logger = wandb_logger
-        
         # Identify and store the model type
         self.model_type = identify_model_type(model)
         logging.info(f"Identified model type: {self.model_type}")
         
+        # Initialize attributes
         self.model = model
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.dataloader = dataloader
         self.device = self.accelerator.device  # Use accelerator's device
         
+        # Trainer configurations
         self.start_epoch = 0
         self.nepochs = kwargs.get('nepochs', 100)
         self.save_checkpoint_every = kwargs.get('save_checkpoint_every', 10)
@@ -77,7 +76,8 @@ class BaseTrainer:
         self.results_folder.mkdir(parents=True, exist_ok=True)
         self.loss_history = []
         self.verbose = kwargs.get('verbose', False)
-
+        self.wandb_logger = None
+        
         # Create 'checkpoints' subfolder under results_folder
         self.checkpoints_folder = self.results_folder / 'checkpoints'
         self.checkpoints_folder.mkdir(parents=True, exist_ok=True)
@@ -88,6 +88,9 @@ class BaseTrainer:
         self.checkpoint = kwargs.get('checkpoint', None)
         if self.checkpoint:
             self.load_checkpoint(self.checkpoint)
+        
+        # Initialize WandB only if main process
+        self.init_wandb(kwargs.get("wandb_config", None))
 
         # Prepare the model, optimizer, scheduler, and dataloader
         if self.scheduler:
@@ -97,6 +100,19 @@ class BaseTrainer:
             self.model, self.optimizer, self.dataloader = self.accelerator.prepare(
                 self.model, self.optimizer, self.dataloader)
 
+    def init_wandb(self, wandb_config):
+        """Initialize WandB logging if the current process is the main one."""
+        if self.accelerator.is_main_process:
+            import wandb
+            self.wandb_logger = wandb.init(
+                project=wandb_config.get("project", "default-project"),
+                config=wandb_config.get("config", {}),
+                name=wandb_config.get("name", "default-run"),
+            )
+            self.wandb_logger.config.update({"results_folder": str(self.results_folder)})
+        # Wait for all processes to synchronize before proceeding
+        self.accelerator.wait_for_everyone()
+    
     def train(self):
         logging.info("Starting training...")
         for epoch in range(self.start_epoch, self.nepochs):
@@ -141,10 +157,6 @@ class BaseTrainer:
             # Save checkpoint
             if (epoch + 1) % self.save_checkpoint_every == 0 or (epoch + 1) == self.nepochs:
                 self.save_checkpoint(epoch)
-                
-                # Upload checkpoint to WandB
-                if self.wandb_logger:
-                    self.wandb_logger.save(str(checkpoint_path))
 
         # Plot loss convergence
         if self.accelerator.is_main_process:
@@ -172,6 +184,8 @@ class BaseTrainer:
         if self.accelerator.is_main_process:
             self.accelerator.save(checkpoint_data, checkpoint_path)
             logging.info(f"Model checkpoint saved to {checkpoint_path}")
+            if self.wandb_logger:
+                self.wandb_logger.save(str(checkpoint_path))
 
     def load_checkpoint(self, checkpoint_path):
         logging.info(f"Loading checkpoint from {checkpoint_path}")
@@ -199,6 +213,11 @@ class BaseTrainer:
             plt.grid(True)
             plt.savefig(self.results_folder / "loss_convergence.png")
             plt.close()
+    
+    def finalize(self):
+        """Finish the WandB run if it was initialized."""
+        if self.accelerator.is_main_process and self.wandb_logger:
+            self.wandb_logger.finish()
 
 class GraphPredictionTrainer(BaseTrainer):
     def __init__(self, criterion=None, wandb_logger=None, **kwargs):
