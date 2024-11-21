@@ -9,7 +9,7 @@
 #SBATCH --gpus=1
 #SBATCH --nodes=1
 #SBATCH --mem-per-cpu=16G
-#SBATCH --time=10:00:00
+#SBATCH --time=33:00:00
 # =============================================================================
 # SLURM Job Configuration for Mesh Graph AutoEncoder (mgn-ae)
 # =============================================================================
@@ -51,8 +51,8 @@ TASK="predict_n6d"             # Replace with your specific task
 MODE="train"
 NTRAIN=4156
 BATCH_SIZE=16
-NEPOCHS=1000
-HIDDEN_DIM=256
+NEPOCHS=3000
+HIDDEN_DIM=128
 NUM_LAYERS=6                   # Must be even for autoencoders (encoder + decoder)
 
 # Learning rate scheduler parameters
@@ -69,7 +69,7 @@ RANDOM_SEED=63
 # Construct the Python Command with All Required Arguments
 # =============================================================================
 
-python_command="python src/graph_models/train.py \
+python_command="python src/graph_models/train_wandb.py \
     --model $MODEL \
     --dataset $DATASET \
     --task $TASK \

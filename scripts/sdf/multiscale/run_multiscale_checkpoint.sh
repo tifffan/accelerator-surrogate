@@ -51,35 +51,36 @@ DATA_KEYWORD="knn_k5_weighted"
 TASK="predict_n6d"             # Replace with your specific task
 MODE="train"
 NTRAIN=4156
-BATCH_SIZE=32
-NEPOCHS=2000
-HIDDEN_DIM=256
+BATCH_SIZE=16
+NEPOCHS=3000
+HIDDEN_DIM=128
 NUM_LAYERS=6                   # Must be even for autoencoders (encoder + decoder)
 
 # Multiscale-specific parameters
 MULTISCALE_N_MLP_HIDDEN_LAYERS=2
 MULTISCALE_N_MMP_LAYERS=2
-MULTISCALE_N_MESSAGE_PASSING_LAYERS=1
+MULTISCALE_N_MESSAGE_PASSING_LAYERS=2
 
 # Learning rate scheduler parameters
-LR=1e-4
+LR=1e-3
 LR_SCHEDULER="lin"
 LIN_START_EPOCH=10
 LIN_END_EPOCH=1000
-LIN_FINAL_LR=1e-6
+LIN_FINAL_LR=1e-5
 
 # Set a random seed for reproducibility
 RANDOM_SEED=63
 
 # Checkpoint path
-CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/multiscale/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b32_lr0.0001_h256_ly6_pr1.00_ep2000_sch_lin_10_1000_1e-06_mlph2_mmply2_mply1/checkpoints/model-1259.pth"
+# CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/multiscale/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b32_lr0.0001_h256_ly6_pr1.00_ep2000_sch_lin_10_1000_1e-06_mlph2_mmply2_mply1/checkpoints/model-1259.pth"
 # CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/multiscale/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b16_lr0.0001_h128_ly4_pr1.00_ep2000_sch_lin_100_1000_1e-05_mlph2_mmply2_mply1/checkpoints/model-1999.pth"
+CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/multiscale/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b16_lr0.001_h128_ly6_pr1.00_ep3000_sch_lin_10_1000_1e-05_mlph2_mmply2_mply2/checkpoints/model-329.pth"
 
 # =============================================================================
 # Construct the Python Command with All Required Arguments
 # =============================================================================
 
-python_command="python src/graph_models/train.py \
+python_command="python src/graph_models/train_wandb.py \
     --model $MODEL \
     --dataset $DATASET \
     --task $TASK \

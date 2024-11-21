@@ -1,15 +1,15 @@
 #!/bin/bash
 #SBATCH --account=ad:beamphysics
 #SBATCH --partition=ampere
-#SBATCH --job-name=acc_mgn
+#SBATCH --job-name=run_mgn_1_4
 #SBATCH --output=logs/run_mgn_1_4_%j.out
 #SBATCH --error=logs/run_mgn_1_4_%j.err
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=16
+#SBATCH --cpus-per-task=1
 #SBATCH --gpus-per-node=4
 #SBATCH --nodes=1
-#SBATCH --mem-per-cpu=32G
-#SBATCH --time=0:30:00
+#SBATCH --mem-per-cpu=16G
+#SBATCH --time=33:30:00
 
 # Set the PYTHONPATH to include your project directory
 export PYTHONPATH=/sdf/home/t/tiffan/repo/accelerator-surrogate
@@ -37,17 +37,17 @@ DATA_KEYWORD="knn_k5_weighted"
 TASK="predict_n6d"             # Replace with your specific task
 MODE="train"
 NTRAIN=4156
-BATCH_SIZE=8
+BATCH_SIZE=16
 NEPOCHS=3000
 HIDDEN_DIM=256
 NUM_LAYERS=6                   # Must be even for autoencoders (encoder + decoder)
 
 # Learning rate scheduler parameters
-LR=1e-4
+LR=1e-3
 LR_SCHEDULER="lin"
 LIN_START_EPOCH=10
 LIN_END_EPOCH=1000
-LIN_FINAL_LR=1e-6
+LIN_FINAL_LR=1e-5
 
 # Random seed for reproducibility
 RANDOM_SEED=63
@@ -86,7 +86,7 @@ echo "Running command: $python_command"
 # Set master address and port for distributed training
 export MASTER_ADDR=$(hostname)
 export MASTER_PORT=29500  # You can choose any free port
-export OMP_NUM_THREADS=16  # Adjust as needed
+export OMP_NUM_THREADS=4  # Adjust as needed
 
 # Use accelerate launch with srun
 srun -l bash -c "
