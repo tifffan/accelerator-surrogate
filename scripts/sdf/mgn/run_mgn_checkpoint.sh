@@ -50,15 +50,15 @@ DATA_KEYWORD="knn_k5_weighted"
 TASK="predict_n6d"             # Replace with your specific task
 MODE="train"
 NTRAIN=4156
-BATCH_SIZE=32
+BATCH_SIZE=16
 NEPOCHS=3000
-HIDDEN_DIM=256
+HIDDEN_DIM=128
 NUM_LAYERS=6                   # Must be even for autoencoders (encoder + decoder)
 
 # Learning rate scheduler parameters
-LR=1e-4
+LR=1e-3
 LR_SCHEDULER="lin"
-LIN_START_EPOCH=100
+LIN_START_EPOCH=10
 LIN_END_EPOCH=1000
 LIN_FINAL_LR=1e-5
 
@@ -66,14 +66,15 @@ LIN_FINAL_LR=1e-5
 RANDOM_SEED=63
 
 # Checkpoint path
-CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/mgn/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b32_lr0.0001_h256_ly6_pr1.00_ep2000_sch_lin_100_1000_1e-05/checkpoints/model-1999.pth"
+# CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/mgn/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b32_lr0.0001_h256_ly6_pr1.00_ep2000_sch_lin_100_1000_1e-05/checkpoints/model-1999.pth"
 # CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/mgn/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b32_lr0.0001_h256_ly6_pr1.00_ep1000/checkpoints/model-999.pth"
+CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/mgn/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b16_lr0.001_h128_ly6_pr1.00_ep3000_sch_lin_10_1000_1e-05/checkpoints/model-1509.pth"
 
 # =============================================================================
 # Construct the Python Command with All Required Arguments
 # =============================================================================
 
-python_command="python src/graph_models/train.py \
+python_command="python src/graph_models/train_wandb.py \
     --model $MODEL \
     --dataset $DATASET \
     --task $TASK \

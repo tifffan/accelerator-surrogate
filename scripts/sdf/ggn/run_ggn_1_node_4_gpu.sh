@@ -1,15 +1,15 @@
 #!/bin/bash
 #SBATCH --account=ad:beamphysics
 #SBATCH --partition=ampere
-#SBATCH --job-name=run_mgn_1_4
-#SBATCH --output=logs/run_mgn_1_4_%j.out
-#SBATCH --error=logs/run_mgn_1_4_%j.err
+#SBATCH --job-name=run_ggn_1_4
+#SBATCH --output=logs/run_ggn_1_4_%j.out
+#SBATCH --error=logs/run_ggn_1_4_%j.err
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --gpus-per-node=4
 #SBATCH --nodes=1
 #SBATCH --mem-per-cpu=16G
-#SBATCH --time=33:30:00
+#SBATCH --time=0:30:00
 
 # Set the PYTHONPATH to include your project directory
 export PYTHONPATH=/sdf/home/t/tiffan/repo/accelerator-surrogate
@@ -31,15 +31,15 @@ echo "Start time: $(date)"
 BASE_DATA_DIR="/sdf/data/ad/ard/u/tiffan/data/"
 BASE_RESULTS_DIR="/sdf/data/ad/ard/u/tiffan/results/"
 
-MODEL="mgn"
+MODEL="ggn"
 DATASET="graph_data_filtered_total_charge_51"  # Replace with your actual dataset name
 DATA_KEYWORD="knn_k5_weighted"
 TASK="predict_n6d"             # Replace with your specific task
 MODE="train"
-NTRAIN=4156
+NTRAIN=100
 BATCH_SIZE=16
-NEPOCHS=2000
-HIDDEN_DIM=512
+NEPOCHS=1
+HIDDEN_DIM=128
 NUM_LAYERS=6                   # Must be even for autoencoders (encoder + decoder)
 
 # Learning rate scheduler parameters
@@ -56,7 +56,7 @@ RANDOM_SEED=63
 # Construct the Python Command with All Required Arguments
 # =============================================================================
 
-python_command="src/graph_models/train_accelerate_wandb.py \
+python_command="src/graph_models/context_train.py \
     --model $MODEL \
     --dataset $DATASET \
     --task $TASK \

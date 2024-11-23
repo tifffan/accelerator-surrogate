@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --account=ad:beamphysics
 #SBATCH --partition=ampere
-#SBATCH --job-name=run_mgn_1_4
-#SBATCH --output=logs/run_mgn_1_4_%j.out
-#SBATCH --error=logs/run_mgn_1_4_%j.err
+#SBATCH --job-name=run_gat_1_4
+#SBATCH --output=logs/run_gat_1_4_%j.out
+#SBATCH --error=logs/run_gat_1_4_%j.err
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --gpus-per-node=4
@@ -31,26 +31,32 @@ echo "Start time: $(date)"
 BASE_DATA_DIR="/sdf/data/ad/ard/u/tiffan/data/"
 BASE_RESULTS_DIR="/sdf/data/ad/ard/u/tiffan/results/"
 
-MODEL="mgn"
+MODEL="gat"
 DATASET="graph_data_filtered_total_charge_51"  # Replace with your actual dataset name
 DATA_KEYWORD="knn_k5_weighted"
 TASK="predict_n6d"             # Replace with your specific task
 MODE="train"
 NTRAIN=4156
-BATCH_SIZE=16
-NEPOCHS=2000
-HIDDEN_DIM=512
+BATCH_SIZE=4
+NEPOCHS=3000
+HIDDEN_DIM=256
 NUM_LAYERS=6                   # Must be even for autoencoders (encoder + decoder)
 
+# GAT-specific parameters
+GAT_HEADS=4
+
 # Learning rate scheduler parameters
-LR=1e-3
+LR=1e-4
 LR_SCHEDULER="lin"
-LIN_START_EPOCH=10
-LIN_END_EPOCH=2000
+LIN_START_EPOCH=100
+LIN_END_EPOCH=1000
 LIN_FINAL_LR=1e-5
 
 # Random seed for reproducibility
 RANDOM_SEED=63
+
+# CHECKPOINT=None
+CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/gat/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b4_lr0.0001_h256_ly6_pr1.00_ep3000_sch_lin_400_4000_1e-05_heads4/checkpoints/model-329.pth"
 
 # =============================================================================
 # Construct the Python Command with All Required Arguments
@@ -69,12 +75,14 @@ python_command="src/graph_models/train_accelerate_wandb.py \
     --nepochs $NEPOCHS \
     --hidden_dim $HIDDEN_DIM \
     --num_layers $NUM_LAYERS \
+    --gat_heads $GAT_HEADS \
     --lr $LR \
     --lr_scheduler $LR_SCHEDULER \
     --lin_start_epoch $((LIN_START_EPOCH * SLURM_JOB_NUM_NODES * SLURM_GPUS_PER_NODE)) \
     --lin_end_epoch $((LIN_END_EPOCH * SLURM_JOB_NUM_NODES * SLURM_GPUS_PER_NODE)) \
     --lin_final_lr $LIN_FINAL_LR \
-    --random_seed $RANDOM_SEED"
+    --random_seed $RANDOM_SEED \
+    --checkpoint $CHECKPOINT"
 
 # =============================================================================
 # Execute the Training

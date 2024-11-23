@@ -45,7 +45,7 @@ NUM_LAYERS=6                   # Must be even for autoencoders (encoder + decode
 # Multiscale-specific parameters
 MULTISCALE_N_MLP_HIDDEN_LAYERS=2
 MULTISCALE_N_MMP_LAYERS=2
-MULTISCALE_N_MESSAGE_PASSING_LAYERS=1
+MULTISCALE_N_MESSAGE_PASSING_LAYERS=2
 
 # Learning rate scheduler parameters
 LR=1e-4
@@ -60,6 +60,8 @@ RANDOM_SEED=63
 # Checkpoint path
 # CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/multiscale/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b32_lr0.0001_h256_ly6_pr1.00_ep2000_sch_lin_10_1000_1e-06_mlph2_mmply2_mply1/checkpoints/model-1259.pth"
 # CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/multiscale/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b4_lr0.0001_h256_ly6_pr1.00_ep3000_sch_lin_400_4000_1e-05_mlph2_mmply2_mply1/checkpoints/model-139.pth"
+CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/multiscale/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b4_lr0.0001_h256_ly6_pr1.00_ep3000_sch_lin_400_4000_1e-05_mlph2_mmply2_mply4/checkpoints/model-139.pth"
+
 
 # =============================================================================
 # Construct the Python Command with All Required Arguments

@@ -63,6 +63,17 @@ def generate_results_folder_name(args):
         parts.append(f"mlph{args.multiscale_n_mlp_hidden_layers}")
         parts.append(f"mmply{args.multiscale_n_mmp_layers}")
         parts.append(f"mply{args.multiscale_n_message_passing_layers}")
+    elif args.model == 'ggn':
+        # GeneralGraphNetwork may not have specific parameters to include
+        pass
+    elif args.model == 'cgn':
+        # ConditionalGraphNetwork may not have specific parameters to include
+        pass
+    elif args.model == 'acgn':
+        # AttentionConditionalGraphNetwork may have the number of attention heads
+        parts.append(f"heads{args.num_heads}")
+    else:
+        logging.warning(f"Model '{args.model}' is not recognized for specific parameters in folder naming.")
 
     # Combine parts to form the folder name
     folder_name = '_'.join(map(str, parts))
