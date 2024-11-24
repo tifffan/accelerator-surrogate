@@ -53,7 +53,7 @@ LIN_FINAL_LR=1e-5
 RANDOM_SEED=63
 
 # Checkpoint to resume training
-CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/gcn/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b4_lr0.0001_h256_ly6_pr1.00_ep3000_sch_lin_400_4000_1e-05/checkpoints/model-279.pth"
+CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/gcn/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b4_lr0.0001_h256_ly6_pr1.00_ep3000_sch_lin_400_4000_1e-05/checkpoints/model-2389.pth"
 
 # =============================================================================
 # Construct the Python Command with All Required Arguments

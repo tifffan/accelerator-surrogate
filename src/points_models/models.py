@@ -1,6 +1,7 @@
+# model.py
+
 import torch
 import torch.nn as nn
-import torch.optim as optim
 
 # Residual MLP Block
 class ResidualMLP(nn.Module):
@@ -24,10 +25,10 @@ class ResidualMLP(nn.Module):
         out = self.relu2(out)
         return out
 
-# ElectronBeamPointNet Model with Configurable Hidden Dimension and Layers
-class ElectronBeamPointNet(nn.Module):
+# PointNet Model with Configurable Hidden Dimension and Layers
+class PointNet1(nn.Module):
     def __init__(self, hidden_dim=128, num_layers=3):
-        super(ElectronBeamPointNet, self).__init__()
+        super(PointNet1, self).__init__()
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
 
@@ -91,85 +92,3 @@ class ElectronBeamPointNet(nn.Module):
         x = self.mlp5(x)  # (B, N, 6)
 
         return x
-
-# Main code to utilize the model with your DataLoader
-if __name__ == "__main__":
-    data_catalog = '/global/homes/t/tiffan/slac-point/data/catalogs/electrons_vary_distributions_vary_settings_catalog.csv'
-    statistics_file = '/global/homes/t/tiffan/slac-point/data/catalogs/global_statistics.txt'
-
-    # Parameters
-    batch_size = 64
-    n_train = 800
-    n_val = 100
-    n_test = 100
-    random_seed = 123
-    num_epochs = 10  # Set the number of training epochs
-    hidden_dim = 128  # Hidden dimension size
-    num_layers = 3    # Number of residual layers
-
-    # Initialize the DataLoaders
-    data_loaders = ElectronBeamDataLoaders(
-        data_catalog=data_catalog,
-        statistics_file=statistics_file,
-        batch_size=batch_size,
-        n_train=n_train,
-        n_val=n_val,
-        n_test=n_test,
-        random_seed=random_seed
-    )
-
-    # Retrieve DataLoaders
-    train_loader = data_loaders.get_train_loader()
-    val_loader = data_loaders.get_val_loader()
-    test_loader = data_loaders.get_test_loader()
-
-    # Initialize the model, loss function, and optimizer
-    model = ElectronBeamPointNet(hidden_dim=hidden_dim, num_layers=num_layers)
-    criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
-
-    # Training loop
-    for epoch in range(num_epochs):
-        model.train()
-        running_loss = 0.0
-        for batch_idx, (initial_state, final_state, settings) in enumerate(train_loader):
-            # Zero the parameter gradients
-            optimizer.zero_grad()
-
-            # Forward pass
-            outputs = model(initial_state, settings)
-
-            # Compute loss
-            loss = criterion(outputs, final_state)
-
-            # Backward pass and optimization
-            loss.backward()
-            optimizer.step()
-
-            # Accumulate loss
-            running_loss += loss.item()
-
-        # Print average loss for the epoch
-        epoch_loss = running_loss / len(train_loader)
-        print(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {epoch_loss:.4f}")
-
-    # Evaluation on the validation set
-    model.eval()
-    val_loss = 0.0
-    with torch.no_grad():
-        for initial_state, final_state, settings in val_loader:
-            outputs = model(initial_state, settings)
-            loss = criterion(outputs, final_state)
-            val_loss += loss.item()
-    val_loss /= len(val_loader)
-    print(f"Validation Loss: {val_loss:.4f}")
-
-    # Example: Iterate through the test DataLoader
-    test_loss = 0.0
-    with torch.no_grad():
-        for initial_state, final_state, settings in test_loader:
-            outputs = model(initial_state, settings)
-            loss = criterion(outputs, final_state)
-            test_loss += loss.item()
-    test_loss /= len(test_loader)
-    print(f"Test Loss: {test_loss:.4f}")

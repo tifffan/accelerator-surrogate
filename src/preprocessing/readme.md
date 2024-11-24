@@ -2,6 +2,9 @@ process_archive_folder
     # python process_archive_folder.py --archive_dir /sdf/data/ad/ard/u/tiffan/Archive_5 --output_file A5_n241_match.csv
 
 plot_histograms_from_catalog
+    # python plot_histograms_from_catalog.py --catalog_file Archive_5_n241_match.csv --output_dir ./histograms/Archive5/ --cleaned_catalog_file Archive_5_n241_match_cleaned.csv --default_total_charge 0.5e-9
+    
+/sdf/data/ad/ard/u/tiffan/Archive_0_n241_match.csv
 
 filter_catalog
 

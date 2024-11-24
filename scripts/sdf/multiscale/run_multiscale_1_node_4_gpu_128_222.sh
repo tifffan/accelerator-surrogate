@@ -57,6 +57,8 @@ LIN_FINAL_LR=1e-5
 # Random seed for reproducibility
 RANDOM_SEED=63
 
+CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/multiscale/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b16_lr0.001_h128_ly6_pr1.00_ep3000_sch_lin_40_4000_1e-05_mlph2_mmply2_mply2/checkpoints/model-199.pth"
+
 # =============================================================================
 # Construct the Python Command with All Required Arguments
 # =============================================================================
@@ -82,7 +84,9 @@ python_command="src/graph_models/train_accelerate_wandb.py \
     --lin_start_epoch $((LIN_START_EPOCH * SLURM_JOB_NUM_NODES * SLURM_GPUS_PER_NODE)) \
     --lin_end_epoch $((LIN_END_EPOCH * SLURM_JOB_NUM_NODES * SLURM_GPUS_PER_NODE)) \
     --lin_final_lr $LIN_FINAL_LR \
-    --random_seed $RANDOM_SEED"
+    --random_seed $RANDOM_SEED \
+    --checkpoint $CHECKPOINT"
+
 
 # =============================================================================
 # Execute the Training

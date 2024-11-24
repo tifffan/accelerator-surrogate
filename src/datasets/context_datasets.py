@@ -65,7 +65,7 @@ class GraphSettingsDataset(Dataset):
         settings = torch.load(settings_filepath, weights_only=False)  # Expected shape: [num_settings]
 
         # Store settings as a separate field in initial_data
-        initial_data.set = settings  # Shape: [num_settings]
+        initial_data.set = settings.unsqueeze(0)  # Shape: [1, num_settings]
 
         # Extract positions (assuming the first 3 features are x, y, z coordinates)
         initial_data.pos = initial_data.x[:, :3]  # Shape: [num_nodes, 3]

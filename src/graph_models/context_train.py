@@ -138,7 +138,7 @@ if __name__ == "__main__":
                 # Initialize GeneralGraphNetwork
                 node_in_dim = sample.x.shape[1]
                 edge_in_dim = sample.edge_attr.shape[1] if use_edge_attr else 0
-                global_in_dim = sample.set.shape[0]  # Using 'set' field from dataset
+                global_in_dim = sample.set.shape[1]  # Using 'set' field from dataset
                 node_out_dim = sample.y.shape[1]
                 edge_out_dim = edge_in_dim  # Assuming edge output dimensions are same as input
                 global_out_dim = global_in_dim
@@ -161,7 +161,7 @@ if __name__ == "__main__":
                 # Initialize ConditionalGraphNetwork
                 node_in_dim = sample.x.shape[1]
                 edge_in_dim = sample.edge_attr.shape[1] if use_edge_attr else 0
-                cond_in_dim = sample.set.shape[0]
+                cond_in_dim = sample.set.shape[1]
                 node_out_dim = sample.y.shape[1]
                 hidden_dim = args.hidden_dim
                 num_layers = args.num_layers
@@ -180,7 +180,7 @@ if __name__ == "__main__":
                 # Initialize AttentionConditionalGraphNetwork
                 node_in_dim = sample.x.shape[1]
                 edge_in_dim = sample.edge_attr.shape[1] if use_edge_attr else 0
-                cond_in_dim = sample.set.shape[0]
+                cond_in_dim = sample.set.shape[1]
                 node_out_dim = sample.y.shape[1]
                 hidden_dim = args.hidden_dim
                 num_layers = args.num_layers

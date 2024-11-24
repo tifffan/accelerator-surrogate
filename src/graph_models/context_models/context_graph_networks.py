@@ -130,13 +130,14 @@ class GeneralGraphNetwork(nn.Module):
                 node_out_dim=hidden_dim,
                 hidden_dim=hidden_dim
             )
-            global_model = GlobalModel(
-                global_in_dim=hidden_dim,
-                node_in_dim=hidden_dim,
-                global_out_dim=hidden_dim,
-                hidden_dim=hidden_dim
-            )
-            self.processors.append(MetaLayer(edge_model, node_model, global_model))
+            # global_model = GlobalModel(
+            #     global_in_dim=hidden_dim,
+            #     node_in_dim=hidden_dim,
+            #     global_out_dim=hidden_dim,
+            #     hidden_dim=hidden_dim
+            # )
+            self.processors.append(MetaLayer(edge_model, node_model, global_model=None))
+            # self.processors.append(MetaLayer(edge_model, node_model, global_model))
 
         # Decoders
         self.node_decoder = nn.Sequential(
@@ -144,16 +145,16 @@ class GeneralGraphNetwork(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, node_out_dim)
         )
-        self.edge_decoder = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, edge_out_dim)
-        )
-        self.global_decoder = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, global_out_dim)
-        )
+        # self.edge_decoder = nn.Sequential(
+        #     nn.Linear(hidden_dim, hidden_dim),
+        #     nn.ReLU(),
+        #     nn.Linear(hidden_dim, edge_out_dim)
+        # )
+        # self.global_decoder = nn.Sequential(
+        #     nn.Linear(hidden_dim, hidden_dim),
+        #     nn.ReLU(),
+        #     nn.Linear(hidden_dim, global_out_dim)
+        # )
 
     def forward(self, x, edge_index, edge_attr, u, batch):
         """
@@ -174,18 +175,24 @@ class GeneralGraphNetwork(nn.Module):
 
         # Apply processors
         for processor in self.processors:
-            x_res, edge_attr_res, u_res = x, edge_attr, u  # Residual connections
+            
+            x_res, edge_attr_res, = x, edge_attr  # Residual connections
             x, edge_attr, u = processor(x, edge_index, edge_attr, u=u, batch=batch)
             x = x + x_res
             edge_attr = edge_attr + edge_attr_res
-            u = u + u_res
+            
+            # x_res, edge_attr_res, u_res = x, edge_attr, u  # Residual connections
+            # x, edge_attr, u = processor(x, edge_index, edge_attr, u=u, batch=batch)
+            # x = x + x_res
+            # edge_attr = edge_attr + edge_attr_res
+            # u = u + u_res
 
         # Decode outputs
         x = self.node_decoder(x)
-        edge_attr = self.edge_decoder(edge_attr)
-        u = self.global_decoder(u)
+        # edge_attr = self.edge_decoder(edge_attr)
+        # u = self.global_decoder(u)
 
-        return x, edge_attr, u
+        return x #, edge_attr, u
 
 class ConditionalGraphNetwork(nn.Module):
     """Graph Network that incorporates global conditions via concatenation."""
@@ -252,7 +259,7 @@ class ConditionalGraphNetwork(nn.Module):
         x = self.node_encoder(x)
         edge_attr = self.edge_encoder(edge_attr)
         u = self.cond_encoder(conditions)
-
+        
         # Apply message passing layers
         for layer in self.processor:
             x_res = x  # Residual connection
