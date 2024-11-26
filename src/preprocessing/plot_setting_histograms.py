@@ -3,11 +3,15 @@ import numpy as np
 from electron_beam_dataloaders import ElectronBeamDataLoaders
 
 
-data_catalog = "/global/homes/t/tiffan/slac-point/data/catalogs/electrons_vary_distributions_vary_settings_filtered_total_charge_55_catalog.csv"
+data_catalog = "/sdf/home/t/tiffan/repo/accelerator-surrogate/src/points_models/catalogs/electrons_vary_distributions_vary_settings_filtered_total_charge_51_catalog_test_sdf.csv"
 
 # Initialize the DataLoaders
 data_loaders = ElectronBeamDataLoaders(
     data_catalog=data_catalog,
+    n_train=5790,
+    n_val=0, 
+    n_test=0
+    
 )
 
 # Retrieve the training DataLoader
@@ -66,4 +70,4 @@ for i, (setting_name, data) in enumerate(zip(settings_names, settings_data)):
     plt.ylabel('Frequency')
 
 plt.tight_layout()
-plt.savefig('settings_histograms_filtered_total_charge_55.png')
+plt.savefig('settings_histograms_filtered_total_charge_51_test.png')

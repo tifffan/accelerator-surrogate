@@ -39,6 +39,65 @@ from src.graph_models.models.multiscale.gnn import (
     TopkMultiscaleGNN
 )
 
+# def parse_hyperparameters_from_folder_name(folder_name):
+#     """
+#     Parses hyperparameters from the folder name and returns them as a dictionary.
+#     """
+#     hyperparams = {}
+#     parts = folder_name.split('_')
+#     known_prefixes = {
+#         'r', 'nt', 'b', 'lr', 'h', 'ly', 'pr', 'ep', 'sch',
+#         'gtr_heads', 'concat', 'dropout', 'mlph', 'mmply', 'mply'
+#     }
+#     idx = 0
+#     data_keyword_parts = []
+#     while idx < len(parts) and not any(parts[idx].startswith(prefix) for prefix in known_prefixes):
+#         data_keyword_parts.append(parts[idx])
+#         idx += 1
+#     hyperparams['data_keyword'] = '_'.join(data_keyword_parts)
+#     while idx < len(parts):
+#         part = parts[idx]
+#         matched = False
+#         for prefix in known_prefixes:
+#             if part.startswith(prefix):
+#                 value = part[len(prefix):]
+#                 if prefix == 'pr':  # pool_ratios
+#                     ratios = value.split('_')
+#                     hyperparams['pool_ratios'] = [float(r) for r in ratios]
+#                 elif prefix == 'concat':
+#                     hyperparams['gtr_concat'] = value.lower() == 'true'
+#                 elif prefix == 'sch':
+#                     hyperparams['lr_scheduler'] = value
+#                     if value.startswith('lin'):
+#                         lin_params = parts[idx + 1:idx + 4]
+#                         if len(lin_params) >= 3:
+#                             hyperparams['lin_start_epoch'] = int(lin_params[0])
+#                             hyperparams['lin_end_epoch'] = int(lin_params[1])
+#                             hyperparams['lin_final_lr'] = float(lin_params[2])
+#                             idx += 3  # Skip the parameters we just consumed
+#                 else:
+#                     param_name = {
+#                         'r': 'random_seed',
+#                         'nt': 'ntrain',
+#                         'b': 'batch_size',
+#                         'lr': 'lr',
+#                         'h': 'hidden_dim',
+#                         'ly': 'num_layers',
+#                         'ep': 'nepochs',
+#                         'heads': 'heads',
+#                         'dropout': 'gtr_dropout',
+#                         'mlph': 'multiscale_n_mlp_hidden_layers',
+#                         'mmply': 'multiscale_n_mmp_layers',
+#                         'mply': 'multiscale_n_message_passing_layers',
+#                     }.get(prefix, prefix)
+#                     hyperparams[param_name] = type_cast(param_name, value)
+#                 matched = True
+#                 break
+#         if not matched:
+#             logging.warning(f"Unrecognized hyperparameter part: {part}")
+#         idx += 1
+#     return hyperparams
+
 def parse_hyperparameters_from_folder_name(folder_name):
     """
     Parses hyperparameters from the folder name and returns them as a dictionary.
@@ -127,6 +186,7 @@ def parse_hyperparameters_from_folder_name(folder_name):
             logging.warning(f"Unrecognized hyperparameter part: {part}")
         idx += 1
     return hyperparams
+
 
 def extract_hyperparameters_from_checkpoint(checkpoint_path):
     """
@@ -244,6 +304,7 @@ def compute_normalized_emittance_z(particle_group):
     mean_zpz = np.mean(z * pz)
     norm_emit_z = np.sqrt(mean_z2 * mean_pz2 - mean_zpz**2)
     return norm_emit_z
+
 
 def plot_particle_groups(pred_pg, target_pg, idx, error_type, results_folder):
     """
@@ -851,7 +912,7 @@ def main():
     # Generate data directories
     initial_graph_dir, final_graph_dir, settings_dir = generate_data_dirs(
         hyperparams.get('base_data_dir', '/sdf/data/ad/ard/u/tiffan/data/'),
-        hyperparams['dataset'],
+        hyperparams['dataset']+"_test_filtered",
         hyperparams['data_keyword']
     )
     logging.info(f"Initial graph directory: {initial_graph_dir}")

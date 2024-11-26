@@ -45,32 +45,16 @@ def parse_hyperparameters_from_folder_name(folder_name):
     """
     hyperparams = {}
     parts = folder_name.split('_')
-    known_prefixes = [
-        'gtr_heads',
-        'heads',
-        'concat',
-        'dropout',
-        'mlph',
-        'mmply',
-        'mply',
-        'lr',
-        'nt',
-        'pr',
-        'ep',
-        'sch',
-        'ly',
-        'h',
-        'r',
-        'b'
-    ]
+    known_prefixes = {
+        'r', 'nt', 'b', 'lr', 'h', 'ly', 'pr', 'ep', 'sch',
+        'heads', 'concat', 'dropout', 'mlph', 'mmply', 'mply'
+    }
     idx = 0
     data_keyword_parts = []
-    # Collect data keyword parts until a known prefix is encountered
     while idx < len(parts) and not any(parts[idx].startswith(prefix) for prefix in known_prefixes):
         data_keyword_parts.append(parts[idx])
         idx += 1
     hyperparams['data_keyword'] = '_'.join(data_keyword_parts)
-    # Parse remaining parts
     while idx < len(parts):
         part = parts[idx]
         matched = False
@@ -78,33 +62,19 @@ def parse_hyperparameters_from_folder_name(folder_name):
             if part.startswith(prefix):
                 value = part[len(prefix):]
                 if prefix == 'pr':  # pool_ratios
-                    if value:
-                        ratios = value.split('_')
-                        try:
-                            hyperparams['pool_ratios'] = [float(r) for r in ratios]
-                        except ValueError:
-                            logging.error(f"Invalid pool_ratios values: {ratios}")
-                            sys.exit(1)
-                    else:
-                        hyperparams['pool_ratios'] = []
+                    ratios = value.split('_')
+                    hyperparams['pool_ratios'] = [float(r) for r in ratios]
                 elif prefix == 'concat':
                     hyperparams['gtr_concat'] = value.lower() == 'true'
                 elif prefix == 'sch':
                     hyperparams['lr_scheduler'] = value
                     if value.startswith('lin'):
-                        # Expecting the next three parts to be lin_start_epoch, lin_end_epoch, lin_final_lr
-                        if idx + 3 < len(parts):
-                            try:
-                                hyperparams['lin_start_epoch'] = int(parts[idx + 1])
-                                hyperparams['lin_end_epoch'] = int(parts[idx + 2])
-                                hyperparams['lin_final_lr'] = float(parts[idx + 3])
-                                idx += 3  # Skip the next three parts as they've been processed
-                            except ValueError:
-                                logging.error("Invalid linear scheduler parameters.")
-                                sys.exit(1)
-                        else:
-                            logging.error("Insufficient parameters for linear scheduler.")
-                            sys.exit(1)
+                        lin_params = parts[idx + 1:idx + 4]
+                        if len(lin_params) >= 3:
+                            hyperparams['lin_start_epoch'] = int(lin_params[0])
+                            hyperparams['lin_end_epoch'] = int(lin_params[1])
+                            hyperparams['lin_final_lr'] = float(lin_params[2])
+                            idx += 3  # Skip the parameters we just consumed
                 else:
                     param_name = {
                         'r': 'random_seed',
@@ -244,6 +214,7 @@ def compute_normalized_emittance_z(particle_group):
     mean_zpz = np.mean(z * pz)
     norm_emit_z = np.sqrt(mean_z2 * mean_pz2 - mean_zpz**2)
     return norm_emit_z
+
 
 def plot_particle_groups(pred_pg, target_pg, idx, error_type, results_folder):
     """
@@ -851,7 +822,7 @@ def main():
     # Generate data directories
     initial_graph_dir, final_graph_dir, settings_dir = generate_data_dirs(
         hyperparams.get('base_data_dir', '/sdf/data/ad/ard/u/tiffan/data/'),
-        hyperparams['dataset'],
+        hyperparams['dataset']+"_test",
         hyperparams['data_keyword']
     )
     logging.info(f"Initial graph directory: {initial_graph_dir}")

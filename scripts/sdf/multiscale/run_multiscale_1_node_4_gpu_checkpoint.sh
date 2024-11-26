@@ -45,7 +45,7 @@ NUM_LAYERS=6                   # Must be even for autoencoders (encoder + decode
 # Multiscale-specific parameters
 MULTISCALE_N_MLP_HIDDEN_LAYERS=2
 MULTISCALE_N_MMP_LAYERS=2
-MULTISCALE_N_MESSAGE_PASSING_LAYERS=2
+MULTISCALE_N_MESSAGE_PASSING_LAYERS=4
 
 # Learning rate scheduler parameters
 LR=1e-4

@@ -39,6 +39,10 @@ from src.graph_models.models.multiscale.gnn import (
     TopkMultiscaleGNN
 )
 
+# **Import PointNet Models**
+from points_models.models import PointNet1, PointNet2, PointNet3, PointNetRegression  # Adjust the import path as needed
+# from dataloaders import PointsDataLoaders  # Adjust the import path as needed
+
 def parse_hyperparameters_from_folder_name(folder_name):
     """
     Parses hyperparameters from the folder name and returns them as a dictionary.
@@ -271,13 +275,48 @@ def plot_particle_groups(pred_pg, target_pg, idx, error_type, results_folder):
         plt.close()
 
 def initialize_model(hyperparams, sample):
-        model_name = hyperparams['model'].lower()
+    """
+    Initializes the model based on the hyperparameters and sample data.
 
+    Args:
+        hyperparams (dict): Parsed hyperparameters
+        sample: A sample from the dataset for initializing model parameters
+
+    Returns:
+        torch.nn.Module: The initialized model
+    """
+    model_name = hyperparams['model'].lower()
+
+    # **Handle PointNet Models**
+    if model_name in ['pn1', 'pn2', 'pn3', 'pn0']:
+        logging.info(f"Selected PointNet model: {model_name}")
+        if model_name == 'pn1':
+            model = PointNet1(hidden_dim=hyperparams['hidden_dim'], num_layers=hyperparams['num_layers'])
+            logging.info("Initialized PointNet1 model.")
+        elif model_name == 'pn2':
+            model = PointNet2(hidden_dim=hyperparams['hidden_dim'], num_layers=hyperparams['num_layers'])
+            logging.info("Initialized PointNet2 model.")
+        elif model_name == 'pn3':
+            model = PointNet3(hidden_dim=hyperparams['hidden_dim'])
+            logging.info("Initialized PointNet3 model.")
+        elif model_name == 'pn0':
+            # Assuming PointNetRegression takes input_dim=6 and output_dim=6 based on train.py
+            model = PointNetRegression(
+                input_dim=6,
+                output_dim=6,
+                hidden_dim=hyperparams['hidden_dim'],
+                feature_transform=False  # Adjust based on your implementation
+            )
+            logging.info("Initialized PointNetRegression model.")
+        else:
+            raise ValueError(f"Unknown PointNet model: {model_name}")
+    else:
+        # **Handle Graph-based Models**
         def is_autoencoder_model(model_name):
             return model_name.lower().endswith('-ae') or model_name.lower() in ['multiscale-topk']
 
         if is_autoencoder_model(model_name):
-            # Autoencoder models
+            # Autoencoder models initialization
             num_layers = hyperparams['num_layers']
             if num_layers % 2 != 0:
                 raise ValueError(f"For autoencoder models, 'num_layers' must be an even number. Received: {num_layers}")
@@ -315,7 +354,7 @@ def initialize_model(hyperparams, sample):
                 in_channels = sample.x.shape[1]
                 hidden_dim = hyperparams['hidden_dim']
                 out_channels = sample.y.shape[1]
-                heads = hyperparams.get('gat_heads', 1)
+                heads = hyperparams.get('heads', 1)
 
                 model = GraphAttentionAutoEncoder(
                     in_channels=in_channels,
@@ -333,7 +372,7 @@ def initialize_model(hyperparams, sample):
                 out_channels = sample.y.shape[1]
                 num_heads = hyperparams.get('gtr_heads', 4)
                 concat = hyperparams.get('gtr_concat', True)
-                dropout = hyperparams.get('gtr_dropout', 0.0)
+                dropout = hyperparams.get('dropout', 0.0)
                 edge_dim = sample.edge_attr.shape[1] if sample.edge_attr is not None else None
 
                 model = GraphTransformerAutoEncoder(
@@ -370,11 +409,11 @@ def initialize_model(hyperparams, sample):
                 input_edge_channels = sample.edge_attr.shape[1] if sample.edge_attr is not None else 0
                 hidden_channels = hyperparams['hidden_dim']
                 output_node_channels = sample.y.shape[1]
-                n_mlp_hidden_layers = hyperparams.get('multiscale_n_mlp_hidden_layers', 2)
-                n_mmp_layers = hyperparams.get('multiscale_n_mmp_layers', 4)
-                n_messagePassing_layers = hyperparams.get('multiscale_n_message_passing_layers', 2)
-                max_level_mmp = num_layers // 2 - 1
-                max_level_topk = num_layers // 2 - 1
+                n_mlp_hidden_layers = hyperparams.get('mlph', 2)
+                n_mmp_layers = hyperparams.get('mmply', 4)
+                n_messagePassing_layers = hyperparams.get('mply', 2)
+                max_level_mmp = depth - 1
+                max_level_topk = depth - 1
 
                 # Compute l_char (characteristic length scale)
                 edge_index = sample.edge_index
@@ -405,7 +444,7 @@ def initialize_model(hyperparams, sample):
                 raise ValueError(f"Unknown autoencoder model {model_name}")
 
         else:
-            # Non-autoencoder models
+            # Non-autoencoder models initialization
             if model_name == 'intgnn':
                 in_channels_node = sample.x.shape[1]
                 in_channels_edge = sample.edge_attr.shape[1] if sample.edge_attr is not None else 0
@@ -567,7 +606,7 @@ def initialize_model(hyperparams, sample):
                 in_channels = sample.x.shape[1]
                 hidden_dim = hyperparams['hidden_dim']
                 out_channels = sample.y.shape[1]
-                heads = hyperparams.get('gat_heads', 1)
+                heads = hyperparams.get('heads', 1)
 
                 model = GraphAttentionNetwork(
                     in_channels=in_channels,
@@ -600,7 +639,7 @@ def initialize_model(hyperparams, sample):
                 out_channels = sample.y.shape[1]
                 num_heads = hyperparams.get('gtr_heads', 4)
                 concat = hyperparams.get('gtr_concat', True)
-                dropout = hyperparams.get('gtr_dropout', 0.0)
+                dropout = hyperparams.get('dropout', 0.0)
                 edge_dim = sample.edge_attr.shape[1] if sample.edge_attr is not None else None
 
                 model = GraphTransformer(
@@ -636,285 +675,365 @@ def initialize_model(hyperparams, sample):
                 logging.error(f"Unknown model '{model_name}'.")
                 sys.exit(1)
 
-        return model
+    def evaluate_model(model, dataloader, device, metadata_final_path, results_folder):
+        """
+        Evaluates the model on the provided dataloader.
 
-# def evaluate_model(model, dataloader, device, metadata_final_path, results_folder):
-#     model.eval()
-#     all_errors = []
-#     all_predictions = []
-#     all_targets = []
-#     with torch.no_grad():
-#         for data in tqdm(dataloader, desc="Evaluating Model"):
-#             data = data.to(device)
-#             x_pred = model_forward(model, data)
-#             mse = F.mse_loss(x_pred, data.y, reduction='none').mean(dim=1)
-#             batch_indices = data.batch.cpu().numpy()
-#             graph_indices = np.unique(batch_indices)
-#             for idx in graph_indices:
-#                 mask = (batch_indices == idx)
-#                 graph_mse = mse[mask].mean().item()
-#                 all_errors.append(graph_mse)
-#                 all_predictions.append(x_pred[mask].cpu())
-#                 all_targets.append(data.y[mask].cpu())
-#     all_errors = np.array(all_errors)
-#     sorted_indices = np.argsort(all_errors)
-#     min_mse_indices = sorted_indices[:5]
-#     max_mse_indices = sorted_indices[-5:]
+        Args:
+            model (torch.nn.Module): The model to evaluate.
+            dataloader (DataLoader): The dataloader for evaluation.
+            device (torch.device): The device to perform computation on.
+            metadata_final_path (str): Path to the metadata file for inverse normalization.
+            results_folder (str): Directory to save evaluation results.
+        """
+        model.eval()
+        all_errors = []
+        all_predictions = []
+        all_targets = []
+        all_relative_errors_x = []
+        all_relative_errors_y = []
+        all_relative_errors_z = []
 
-#     global_mean, global_std = load_global_statistics(metadata_final_path)
+        with torch.no_grad():
+            for data in tqdm(dataloader, desc="Evaluating Model"):
+                if hyperparams['model'].lower() in ['pn1', 'pn2', 'pn3', 'pn0']:
+                    # **PointNet Models**
+                    # TODO: Define hyperparams manually for PointNet models
+                    # In this case, hyperparams are already defined manually in the main function
+                    # Assuming data is a tuple: (initial_state, final_state, settings)
+                    initial_state, final_state, settings = data
+                    initial_state = initial_state.to(device)
+                    final_state = final_state.to(device)
+                    settings = settings.to(device)
+                    
+                    # Forward pass
+                    x_pred = model(initial_state, settings)  # (B, N, 6) or (B, 6)
+                    
+                    # Handle different output shapes
+                    if x_pred.dim() == 3:
+                        # Assuming output shape is (B, N, 6)
+                        mse = F.mse_loss(x_pred, final_state, reduction='none').mean(dim=(1, 2))  # (B,)
+                        for i in range(x_pred.size(0)):
+                            all_errors.append(mse[i].item())
+                            all_predictions.append(x_pred[i].cpu())
+                            all_targets.append(final_state[i].cpu())
+                    elif x_pred.dim() == 2:
+                        # Assuming output shape is (B, 6)
+                        mse = F.mse_loss(x_pred, final_state, reduction='none').mean(dim=1)  # (B,)
+                        for i in range(x_pred.size(0)):
+                            all_errors.append(mse[i].item())
+                            all_predictions.append(x_pred[i].cpu())
+                            all_targets.append(final_state[i].cpu())
+                    else:
+                        logging.error(f"Unexpected output shape from model: {x_pred.shape}")
+                        sys.exit(1)
+                else:
+                    # **Graph-based Models**
+                    data = data.to(device)
+                    x_pred = model_forward(model, data)
+                    mse = F.mse_loss(x_pred, data.y, reduction='none').mean(dim=1)
+                    batch_indices = data.batch.cpu().numpy()
+                    graph_indices = np.unique(batch_indices)
+                    for idx in graph_indices:
+                        mask = (batch_indices == idx)
+                        graph_mse = mse[mask].mean().item()
+                        all_errors.append(graph_mse)
+                        all_predictions.append(x_pred[mask].cpu())
+                        all_targets.append(data.y[mask].cpu())
 
-#     def inverse_normalize(normalized_data):
-#         return normalized_data * global_std + global_mean
+        # **Compute and Log Errors**
+        all_errors = np.array(all_errors)
+        logging.info(f"Average MSE Loss: {all_errors.mean():.4f}")
+        logging.info(f"Median MSE Loss: {np.median(all_errors):.4f}")
+        logging.info(f"Min MSE Loss: {all_errors.min():.4f}")
+        logging.info(f"Max MSE Loss: {all_errors.max():.4f}")
 
-#     # For min MSE samples
-#     for idx in min_mse_indices:
-#         pred = all_predictions[idx]
-#         target = all_targets[idx]
-#         pred_original = inverse_normalize(pred)
-#         target_original = inverse_normalize(target)
-#         pred_pg = transform_to_particle_group(pred_original)
-#         target_pg = transform_to_particle_group(target_original)
-#         plot_particle_groups(pred_pg, target_pg, idx, 'min', results_folder)
-#         pred_norm_emit_x = compute_normalized_emittance_x(pred_pg)
-#         target_norm_emit_x = compute_normalized_emittance_x(target_pg)
-#         relative_error = abs(pred_norm_emit_x - target_norm_emit_x) / abs(target_norm_emit_x)
-#         print(f"Sample {idx} (min MSE): Relative Error in norm_emit_x: {relative_error}")
+        # **Load Global Statistics for Inverse Normalization**
+        global_mean, global_std = load_global_statistics(metadata_final_path)
 
-#     # For max MSE samples
-#     for idx in max_mse_indices:
-#         pred = all_predictions[idx]
-#         target = all_targets[idx]
-#         pred_original = inverse_normalize(pred)
-#         target_original = inverse_normalize(target)
-#         pred_pg = transform_to_particle_group(pred_original)
-#         target_pg = transform_to_particle_group(target_original)
-#         plot_particle_groups(pred_pg, target_pg, idx, 'max', results_folder)
-#         pred_norm_emit_x = compute_normalized_emittance_x(pred_pg)
-#         target_norm_emit_x = compute_normalized_emittance_x(target_pg)
-#         relative_error = abs(pred_norm_emit_x - target_norm_emit_x) / abs(target_norm_emit_x)
-#         print(f"Sample {idx} (max MSE): Relative Error in norm_emit_x: {relative_error}")
+        def inverse_normalize(normalized_data):
+            return normalized_data * global_std + global_mean
 
-#     # Compute overall test error
-#     test_error = all_errors.mean()
-#     print(f"Test Error (MSE): {test_error}")
+        for idx, (pred, target) in enumerate(zip(all_predictions, all_targets)):
+            pred_original = inverse_normalize(pred)
+            target_original = inverse_normalize(target)
+            
+            pred_pg = transform_to_particle_group(pred_original)
+            target_pg = transform_to_particle_group(target_original)
+            
+            pred_norm_emit_x = compute_normalized_emittance_x(pred_pg)
+            target_norm_emit_x = compute_normalized_emittance_x(target_pg)
+            relative_error_x = abs(pred_norm_emit_x - target_norm_emit_x) / (abs(target_norm_emit_x) + 1e-6)
+            all_relative_errors_x.append(relative_error_x)
 
-def evaluate_model(model, dataloader, device, metadata_final_path, results_folder):
-    model.eval()
-    all_errors = []
-    all_predictions = []
-    all_targets = []
-    all_relative_errors_x = []
-    all_relative_errors_y = []
-    all_relative_errors_z = []
-    
-    with torch.no_grad():
-        for data in tqdm(dataloader, desc="Evaluating Model"):
-            data = data.to(device)
-            x_pred = model_forward(model, data)
-            mse = F.mse_loss(x_pred, data.y, reduction='none').mean(dim=1)
-            batch_indices = data.batch.cpu().numpy()
-            graph_indices = np.unique(batch_indices)
-            for idx in graph_indices:
-                mask = (batch_indices == idx)
-                graph_mse = mse[mask].mean().item()
-                all_errors.append(graph_mse)
-                all_predictions.append(x_pred[mask].cpu())
-                all_targets.append(data.y[mask].cpu())
-    
-    all_errors = np.array(all_errors)
-    global_mean, global_std = load_global_statistics(metadata_final_path)
+            # Compute norm emittance y
+            pred_norm_emit_y = compute_normalized_emittance_y(pred_pg)
+            target_norm_emit_y = compute_normalized_emittance_y(target_pg)
+            relative_error_y = abs(pred_norm_emit_y - target_norm_emit_y) / (abs(target_norm_emit_y) + 1e-6)
+            all_relative_errors_y.append(relative_error_y)
 
-    def inverse_normalize(normalized_data):
-        return normalized_data * global_std + global_mean
+            # Compute norm emittance z
+            pred_norm_emit_z = compute_normalized_emittance_z(pred_pg)
+            target_norm_emit_z = compute_normalized_emittance_z(target_pg)
+            relative_error_z = abs(pred_norm_emit_z - target_norm_emit_z) / (abs(target_norm_emit_z) + 1e-6)
+            all_relative_errors_z.append(relative_error_z)
 
-    for pred, target in zip(all_predictions, all_targets):
-        pred_original = inverse_normalize(pred)
-        target_original = inverse_normalize(target)
-        
-        pred_pg = transform_to_particle_group(pred_original)
-        target_pg = transform_to_particle_group(target_original)
-        
-        pred_norm_emit_x = compute_normalized_emittance_x(pred_pg)
-        target_norm_emit_x = compute_normalized_emittance_x(target_pg)
-        relative_error_x = abs(pred_norm_emit_x - target_norm_emit_x) / abs(target_norm_emit_x)
-        all_relative_errors_x.append(relative_error_x)
+        # **Compute Overall Average Relative Errors**
+        avg_relative_error_x = np.mean(all_relative_errors_x)
+        avg_relative_error_y = np.mean(all_relative_errors_y)
+        avg_relative_error_z = np.mean(all_relative_errors_z)
 
-        # Compute norm emittance y
-        pred_norm_emit_y = compute_normalized_emittance_y(pred_pg)
-        target_norm_emit_y = compute_normalized_emittance_y(target_pg)
-        relative_error_y = abs(pred_norm_emit_y - target_norm_emit_y) / abs(target_norm_emit_y)
-        all_relative_errors_y.append(relative_error_y)
+        logging.info(f"Average Relative Error in norm_emittance_x: {avg_relative_error_x:.4f}")
+        logging.info(f"Average Relative Error in norm_emittance_y: {avg_relative_error_y:.4f}")
+        logging.info(f"Average Relative Error in norm_emittance_z: {avg_relative_error_z:.4f}")
 
-        # Compute norm emittance z
-        pred_norm_emit_z = compute_normalized_emittance_z(pred_pg)
-        target_norm_emit_z = compute_normalized_emittance_z(target_pg)
-        relative_error_z = abs(pred_norm_emit_z - target_norm_emit_z) / abs(target_norm_emit_z)
-        all_relative_errors_z.append(relative_error_z)
-    
-    # Compute overall average relative errors
-    avg_relative_error_x = np.mean(all_relative_errors_x)
-    avg_relative_error_y = np.mean(all_relative_errors_y)
-    avg_relative_error_z = np.mean(all_relative_errors_z)
-    
-    logging.info(f"Average Relative Error in norm_emittance_x: {avg_relative_error_x:.4f}")
-    logging.info(f"Average Relative Error in norm_emittance_y: {avg_relative_error_y:.4f}")
-    logging.info(f"Average Relative Error in norm_emittance_z: {avg_relative_error_z:.4f}")
+        # **Optional: Save Errors to a JSON File**
+        errors_dict = {
+            'average_mse_loss': float(all_errors.mean()),
+            'median_mse_loss': float(np.median(all_errors)),
+            'min_mse_loss': float(all_errors.min()),
+            'max_mse_loss': float(all_errors.max()),
+            'average_relative_error_x': float(avg_relative_error_x),
+            'average_relative_error_y': float(avg_relative_error_y),
+            'average_relative_error_z': float(avg_relative_error_z),
+        }
+        errors_path = os.path.join(results_folder, 'evaluation_errors.json')
+        with open(errors_path, 'w') as f:
+            json.dump(errors_dict, f, indent=4)
+        logging.info(f"Saved evaluation errors to {errors_path}")
 
+    def model_forward(model, data):
+        """
+        Forward pass for the model, handling different model types.
 
-def model_forward(model, data):
-    """
-    Forward pass for the model, handling different model types.
-    """
-    if isinstance(model, GNN_TopK):
-        x_pred, _ = model(
-            data.x,
-            data.edge_index,
-            data.edge_attr,
-            data.pos,
-            batch=data.batch
-        )
-    elif isinstance(model, TopkMultiscaleGNN):
-        x_pred, _ = model(
-            data.x,
-            data.edge_index,
-            data.pos,
-            data.edge_attr,
-            data.batch
-        )
-    elif isinstance(model, (SinglescaleGNN, MultiscaleGNN)):
-        x_pred = model(
-            data.x,
-            data.edge_index,
-            data.pos,
-            data.edge_attr,
-            data.batch
-        )
-    elif isinstance(model, (MeshGraphNet, MeshGraphAutoEncoder)):
-        x_pred = model(
-            data.x,
-            data.edge_index,
-            data.edge_attr,
-            data.batch
-        )
-    elif isinstance(model, (GraphTransformer, GraphTransformerAutoEncoder)):
-        x_pred = model(
-            data.x,
-            data.edge_index,
-            data.edge_attr if hasattr(data, 'edge_attr') else None,
-            data.batch
-        )
-    else:  # GraphConvolutionNetwork, GraphAttentionNetwork
-        x_pred = model(
-            data.x,
-            data.edge_index,
-            data.batch
-        )
-    return x_pred
+        Args:
+            model (torch.nn.Module): The model to perform forward pass.
+            data: Batch of data from the dataloader.
 
-def load_global_statistics(metadata_final_path):
-    """Load global mean and standard deviation from a file."""
-    with open(metadata_final_path, 'r') as f:
-        metadata_final = json.load(f)
-    global_mean_final = torch.tensor(metadata_final['global_mean'])
-    global_std_final = torch.tensor(metadata_final['global_std'])
+        Returns:
+            torch.Tensor: Model predictions.
+        """
+        model_type = hyperparams['model'].lower()
 
-    return global_mean_final, global_std_final
-
-def main():
-    parser = argparse.ArgumentParser(description="Evaluate a model checkpoint")
-    parser.add_argument('--checkpoint', type=str, required=True, help="Path to the model checkpoint")
-    parser.add_argument('--cpu_only', action='store_true', help="Force the script to use CPU even if GPU is available")
-    parser.add_argument('--results_folder', type=str, default='evaluation_results', help="Folder to save evaluation results")
-    parser.add_argument('--subsample_size', type=int, default=None, help="Number of samples to use for evaluation (if None, use all)")
-    args = parser.parse_args()
-
-    # Set device
-    device = torch.device('cpu') if args.cpu_only else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    logging.info(f"Using device: {device}")
-
-    # Extract hyperparameters from the checkpoint path
-    hyperparams = extract_hyperparameters_from_checkpoint(args.checkpoint)
-    logging.info(f"Extracted hyperparameters: {hyperparams}")
-
-    # Define required hyperparameters
-    required_hyperparams = [
-        'model', 'dataset', 'task', 'data_keyword', 'random_seed', 'batch_size',
-        'hidden_dim', 'num_layers', 'pool_ratios'
-    ]
-
-    # Check for missing hyperparameters
-    check_missing_hyperparameters(hyperparams, required_params=required_hyperparams)
-
-    # Set random seed
-    set_random_seed(hyperparams['random_seed'])
-
-    # Generate data directories
-    initial_graph_dir, final_graph_dir, settings_dir = generate_data_dirs(
-        hyperparams.get('base_data_dir', '/sdf/data/ad/ard/u/tiffan/data/'),
-        hyperparams['dataset'],
-        hyperparams['data_keyword']
-    )
-    logging.info(f"Initial graph directory: {initial_graph_dir}")
-    logging.info(f"Final graph directory: {final_graph_dir}")
-    logging.info(f"Settings directory: {settings_dir}")
-
-    # Initialize dataset
-    use_edge_attr = hyperparams['model'].lower() in [
-        'intgnn', 'gtr', 'mgn', 'gtr-ae', 'mgn-ae',
-        'singlescale', 'multiscale', 'multiscale-topk'
-    ]
-    logging.info(f"Model '{hyperparams['model']}' requires edge_attr: {use_edge_attr}")
-
-    dataset = GraphDataset(
-        initial_graph_dir=initial_graph_dir,
-        final_graph_dir=final_graph_dir,
-        settings_dir=settings_dir,
-        task=hyperparams['task'],
-        use_edge_attr=use_edge_attr
-    )
-
-    total_dataset_size = len(dataset)
-    logging.info(f"Total dataset size: {total_dataset_size}")
-
-    # Subset dataset if subsample_size is specified
-    if args.subsample_size is not None:
-        np.random.seed(hyperparams['random_seed'])  # For reproducibility
-        if args.subsample_size >= total_dataset_size:
-            logging.warning(f"Requested subsample_size {args.subsample_size} is greater than or equal to total dataset size {total_dataset_size}. Using full dataset.")
+        if model_type in ['pn1', 'pn2', 'pn3', 'pn0']:
+            # **PointNet Models**
+            # Handled separately in evaluate_model
+            # This function won't be called for PointNet models
+            raise NotImplementedError("model_forward should not be called for PointNet models.")
         else:
-            indices = np.random.permutation(total_dataset_size)[:args.subsample_size]
-            dataset = Subset(dataset, indices)
-            logging.info(f"Using a subsample of {args.subsample_size} samples for evaluation.")
+            # **Graph-based Models**
+            if isinstance(model, GNN_TopK):
+                x_pred, _ = model(
+                    data.x,
+                    data.edge_index,
+                    data.edge_attr,
+                    data.pos,
+                    batch=data.batch
+                )
+            elif isinstance(model, TopkMultiscaleGNN):
+                x_pred, _ = model(
+                    data.x,
+                    data.edge_index,
+                    data.pos,
+                    data.edge_attr,
+                    data.batch
+                )
+            elif isinstance(model, (SinglescaleGNN, MultiscaleGNN)):
+                x_pred = model(
+                    data.x,
+                    data.edge_index,
+                    data.pos,
+                    data.edge_attr,
+                    data.batch
+                )
+            elif isinstance(model, (MeshGraphNet, MeshGraphAutoEncoder)):
+                x_pred = model(
+                    data.x,
+                    data.edge_index,
+                    data.edge_attr,
+                    data.batch
+                )
+            elif isinstance(model, (GraphTransformer, GraphTransformerAutoEncoder)):
+                x_pred = model(
+                    data.x,
+                    data.edge_index,
+                    data.edge_attr if hasattr(data, 'edge_attr') else None,
+                    data.batch
+                )
+            else:  # GraphConvolutionNetwork, GraphAttentionNetwork
+                x_pred = model(
+                    data.x,
+                    data.edge_index,
+                    data.batch
+                )
+            return x_pred
 
-    dataloader = DataLoader(dataset, batch_size=hyperparams['batch_size'], shuffle=False)
+    def load_global_statistics(metadata_final_path):
+        """Load global mean and standard deviation from a file."""
+        with open(metadata_final_path, 'r') as f:
+            metadata_final = json.load(f)
+        global_mean_final = torch.tensor(metadata_final['global_mean'])
+        global_std_final = torch.tensor(metadata_final['global_std'])
 
-    # Get a sample data for model initialization
-    sample = dataset[0]
+        return global_mean_final, global_std_final
 
-    # Initialize the model
-    model = initialize_model(hyperparams, sample)
-    model.to(device)
-    logging.info(f"Model moved to {device}.")
+    def main():
+        parser = argparse.ArgumentParser(description="Evaluate a model checkpoint")
+        parser.add_argument('--checkpoint', type=str, required=True, help="Path to the model checkpoint")
+        parser.add_argument('--cpu_only', action='store_true', help="Force the script to use CPU even if GPU is available")
+        parser.add_argument('--results_folder', type=str, default='evaluation_results', help="Folder to save evaluation results")
+        parser.add_argument('--subsample_size', type=int, default=None, help="Number of samples to use for evaluation (if None, use all)")
+        args = parser.parse_args()
 
-    # Load checkpoint
-    checkpoint = torch.load(args.checkpoint, map_location=device)
-    model.load_state_dict(checkpoint['model_state_dict'])
-    logging.info(f"Loaded model state dict from {args.checkpoint}")
+        # Set device
+        device = torch.device('cpu') if args.cpu_only else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        logging.info(f"Using device: {device}")
 
-    # Create results folder
-    results_folder = args.results_folder
-    os.makedirs(results_folder, exist_ok=True)
-    logging.info(f"Results will be saved to {results_folder}")
+        # Determine if the model is PointNet or Graph-based based on the checkpoint
+        # **For PointNet Models, do not parse hyperparameters from the checkpoint path**
+        # Instead, use a predefined hyperparams dictionary
+        model_type = None
+        checkpoint_path_parts = [part for part in args.checkpoint.split(os.sep) if part]
+        if not checkpoint_path_parts:
+            logging.error("Invalid checkpoint path.")
+            sys.exit(1)
+        model_type_candidate = checkpoint_path_parts[-2].lower()  # Assuming folder name contains model type
+        if model_type_candidate in ['pn1', 'pn2', 'pn3', 'pn0']:
+            model_type = model_type_candidate
+        else:
+            # Attempt to extract from checkpoint path
+            # This assumes a specific directory structure
+            if 'checkpoints' not in checkpoint_path_parts:
+                logging.error("'checkpoints' directory not found in the checkpoint path.")
+                sys.exit(1)
+            checkpoint_idx = checkpoint_path_parts.index('checkpoints')
+            if checkpoint_idx < 4:
+                logging.error("Checkpoint path is too short to extract hyperparameters.")
+                sys.exit(1)
+            folder_name = checkpoint_path_parts[checkpoint_idx - 1]
+            task = checkpoint_path_parts[checkpoint_idx - 2]
+            dataset = checkpoint_path_parts[checkpoint_idx - 3]
+            model = checkpoint_path_parts[checkpoint_idx - 4]
+            base_results_dir = os.sep + os.sep.join(checkpoint_path_parts[:checkpoint_idx - 4])
+            hyperparams = parse_hyperparameters_from_folder_name(folder_name)
+            hyperparams.update({
+                'model': model,
+                'dataset': dataset,
+                'task': task,
+                'base_results_dir': base_results_dir
+            })
+            model_type = hyperparams['model'].lower()
 
-    # Path to metadata_final.json
-    metadata_final_path = os.path.join(final_graph_dir, 'metadata.json')
-    if not os.path.exists(metadata_final_path):
-        logging.error(f"metadata.json not found at {metadata_final_path}")
-        sys.exit(1)
+        if model_type in ['pn1', 'pn2', 'pn3', 'pn0']:
+            logging.info("Selected model is a PointNet variant. Using Point cloud dataset.")
 
-    # Evaluate model
-    evaluate_model(model, dataloader, device, metadata_final_path, results_folder)
+            # **TODO: Define hyperparams manually for PointNet models**
+            # Instead of parsing hyperparameters from the checkpoint, define them manually here
+            hyperparams = {
+                'model': 'pn0',
+                'random_seed': 63,                       # Replace with your random seed
+                'batch_size': 1,                        # Replace with your batch size
+                'hidden_dim': 64,                       # Replace with your hidden dimension
+                'data_catalog': '/sdf/home/t/tiffan/repo/accelerator-surrogate/src/points_models/catalogs/electrons_vary_distributions_vary_settings_filtered_total_charge_51_catalog_train_sdf.csv',  # Replace with your data catalog path
+                'statistics_file': '/sdf/home/t/tiffan/repo/accelerator-surrogate/src/points_models/catalogs/global_statistics_filtered_total_charge_51_train.txt',  # Replace with your statistics file path
+                'metadata_final_path': '/sdf/data/ad/ard/u/tiffan/data/graph_data_filtered_total_charge_51/final_knn_k5_weighted_graphs/metadata_final.json'  # Replace with your metadata final path
+            }
 
-if __name__ == "__main__":
-    main()
+            # Set random seed
+            set_random_seed(hyperparams['random_seed'])
 
+            # Initialize PointNet DataLoaders
+            data_loaders = PointsDataLoaders(
+                data_catalog=hyperparams['data_catalog'],
+                statistics_file=hyperparams['statistics_file'],
+                batch_size=hyperparams['batch_size'],
+                n_train=0,  # Assuming evaluation uses test set
+                n_val=0,
+                n_test=hyperparams.get('n_test', 1000),  # Set default test size if not provided
+                random_seed=hyperparams['random_seed']
+            )
+            test_loader = data_loaders.get_test_loader()
+            dataloader = test_loader  # For evaluation, use the test loader
+
+        else:
+            logging.info("Selected model is a Graph-based variant. Using Graph dataset.")
+
+            # Generate data directories
+            initial_graph_dir, final_graph_dir, settings_dir = generate_data_dirs(
+                hyperparams.get('base_data_dir', '/sdf/data/ad/ard/u/tiffan/data/'),
+                hyperparams['dataset'],
+                hyperparams['data_keyword']
+            )
+            logging.info(f"Initial graph directory: {initial_graph_dir}")
+            logging.info(f"Final graph directory: {final_graph_dir}")
+            logging.info(f"Settings directory: {settings_dir}")
+
+            # Initialize GraphDataset
+            use_edge_attr = hyperparams['model'].lower() in [
+                'intgnn', 'gtr', 'mgn', 'gtr-ae', 'mgn-ae',
+                'singlescale', 'multiscale', 'multiscale-topk'
+            ]
+            logging.info(f"Model '{hyperparams['model']}' requires edge_attr: {use_edge_attr}")
+
+            dataset = GraphDataset(
+                initial_graph_dir=initial_graph_dir,
+                final_graph_dir=final_graph_dir,
+                settings_dir=settings_dir,
+                task=hyperparams['task'],
+                use_edge_attr=use_edge_attr
+            )
+
+            total_dataset_size = len(dataset)
+            logging.info(f"Total dataset size: {total_dataset_size}")
+
+            # Subset dataset if subsample_size is specified
+            if args.subsample_size is not None:
+                np.random.seed(hyperparams['random_seed'])  # For reproducibility
+                if args.subsample_size >= total_dataset_size:
+                    logging.warning(f"Requested subsample_size {args.subsample_size} is greater than or equal to total dataset size {total_dataset_size}. Using full dataset.")
+                else:
+                    indices = np.random.permutation(total_dataset_size)[:args.subsample_size]
+                    dataset = Subset(dataset, indices)
+                    logging.info(f"Using a subsample of {args.subsample_size} samples for evaluation.")
+
+            dataloader = DataLoader(dataset, batch_size=hyperparams['batch_size'], shuffle=False)
+
+        # Get a sample data for model initialization
+        if model_type in ['pn1', 'pn2', 'pn3', 'pn0']:
+            sample = dataset[0]  # Assuming dataset[0] returns (initial_state, final_state, settings)
+        else:
+            sample = dataset[0]  # Existing GraphDataset sample
+
+        # Initialize the model
+        model = initialize_model(hyperparams, sample)
+        model.to(device)
+        logging.info(f"Model moved to {device}.")
+
+        # Load checkpoint
+        checkpoint = torch.load(args.checkpoint, map_location=device)
+        model.load_state_dict(checkpoint['model_state_dict'])
+        logging.info(f"Loaded model state dict from {args.checkpoint}")
+
+        # Create results folder
+        results_folder = args.results_folder
+        os.makedirs(results_folder, exist_ok=True)
+        logging.info(f"Results will be saved to {results_folder}")
+
+        if model_type in ['pn1', 'pn2', 'pn3', 'pn0']:
+            # For PointNet models, metadata_final_path is already defined manually
+            metadata_final_path = hyperparams['metadata_final_path']
+            if not os.path.exists(metadata_final_path):
+                logging.error(f"metadata_final.json not found at {metadata_final_path}")
+                sys.exit(1)
+        else:
+            # Path to metadata_final.json for Graph-based models
+            metadata_final_path = os.path.join(final_graph_dir, 'metadata.json')
+            if not os.path.exists(metadata_final_path):
+                logging.error(f"metadata.json not found at {metadata_final_path}")
+                sys.exit(1)
+
+        # Evaluate model
+        evaluate_model(model, dataloader, device, metadata_final_path, results_folder)
+
+    if __name__ == "__main__":
+        main()

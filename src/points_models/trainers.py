@@ -5,11 +5,32 @@ from tqdm import tqdm
 import logging
 import matplotlib.pyplot as plt
 from pathlib import Path
+from models import PointNet1, PointNet2, PointNet3, PointNetRegression
 
 from accelerate import Accelerator
 
+# In trainers.py or a utilities module
+def identify_model_type(model):
+    """
+    Identifies the type of the model and returns a string identifier.
+    """
+    if isinstance(model, PointNetRegression):
+        return 'PointNetRegression'
+    elif isinstance(model, PointNet1):
+        return 'PointNet1'
+    elif isinstance(model, PointNet2):
+        return 'PointNet2'
+    elif isinstance(model, PointNet3):
+        return 'PointNet3'
+    else:
+        return 'UnknownModel'
+
 class BaseTrainer:
     def __init__(self, model, train_loader, val_loader, optimizer, scheduler=None, device='cpu', wandb_logger=None, **kwargs):
+        # Identify and store the model type before wrapping
+        self.model_type = identify_model_type(model)
+        logging.info(f"Identified model type: {self.model_type}")
+        
         # Initialize the accelerator
         self.accelerator = Accelerator()
         

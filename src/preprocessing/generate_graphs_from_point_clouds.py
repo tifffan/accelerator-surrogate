@@ -50,13 +50,14 @@ def process_data_catalog(
     weighted_edge=False,
     global_mean=None,
     global_std=None,
-    subsample_size=128,
+    subsample_size=None,
 ):
     """Process the data catalog and save the graph data to files."""
     data = pd.read_csv(data_catalog)
 
     # Subsample the data to only process the first 'subsample_size' rows
-    data = data.head(subsample_size)
+    if subsample_size:
+        data = data.head(subsample_size)
 
     # Generate output directories for initial state, final state, and settings
     graph_data_dir_initial = generate_graph_data_dir(
@@ -326,7 +327,7 @@ def parse_args():
                         help="Use Gaussian kernel on edge weights instead of binary edges")
     parser.add_argument('--output_base_dir', type=str, default="./graph_data/",
                         help="Base directory to save the processed graph data")
-    parser.add_argument('--subsample_size', type=int, default=128,
+    parser.add_argument('--subsample_size', type=int, default=None,
                         help="Number of data catalog entries to process (default: 128)")
     return parser.parse_args()
 
@@ -359,3 +360,9 @@ if __name__ == "__main__":
     print(f"Initial state graph data saved to: {generate_graph_data_dir('initial', args.edge_method, args.weighted_edge, args.k, args.distance_threshold, args.output_base_dir)}")
     print(f"Final state graph data saved to: {generate_graph_data_dir('final', args.edge_method, args.weighted_edge, args.k, args.distance_threshold, args.output_base_dir)}")
     print(f"Settings data saved to: {generate_graph_data_dir('settings', args.edge_method, args.weighted_edge, args.k, args.distance_threshold, args.output_base_dir)}")
+
+    
+    # example
+    # enbironment requires torch_geometric
+    # note that we are normalizing test set using statistics computed from training set
+    # python generate_graphs_from_point_clouds.py --data_catalog /sdf/home/t/tiffan/repo/accelerator-surrogate/src/preprocessing/electrons_vary_distributions_vary_settings_filtered_total_charge_51_catalog_test_sdf/electrons_vary_distributions_vary_settings_filtered_total_charge_51_catalog_test_sdf_filter.csv --statistics_file /sdf/home/t/tiffan/repo/accelerator-surrogate/src/points_models/catalogs/global_statistics_filtered_total_charge_51_train.txt --k 5 --edge_method knn --weighted_edge --output_base_dir /sdf/data/ad/ard/u/tiffan/data/graph_data_filtered_total_charge_51_test_filtered

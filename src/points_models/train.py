@@ -9,7 +9,7 @@ from dataloaders import PointsDataLoaders
 from trainers import PointsTrainer
 from config import parse_args
 from utils import generate_results_folder_name, save_metadata, set_random_seed, get_scheduler
-from models import PointNet1 
+from models import PointNet1, PointNet2, PointNet3, PointNetRegression
 
 if __name__ == "__main__":
     args = parse_args()
@@ -56,6 +56,12 @@ if __name__ == "__main__":
     # Initialize the model and loss function
     if args.model == 'pn1':
         model = PointNet1(hidden_dim=args.hidden_dim, num_layers=args.num_layers)
+    elif args.model == 'pn2':
+        model = PointNet2(hidden_dim=args.hidden_dim, num_layers=args.num_layers)
+    elif args.model == 'pn3':
+        model = PointNet3(hidden_dim=args.hidden_dim)
+    elif args.model == 'pn0':
+        model = PointNetRegression(input_dim=6, output_dim=6, hidden_dim=args.hidden_dim, feature_transform=False)
     else:
         raise ValueError(f"Unknown model {args.model}")
     model.to(device)
@@ -86,7 +92,7 @@ if __name__ == "__main__":
         wandb_config=wandb_config,
         criterion=criterion
     )
-    logging.info("Initialized ElectronBeamTrainer.")
+    logging.info("Initialized PointsTrainer.")
 
     # Save metadata
     save_metadata(args, model, results_folder)

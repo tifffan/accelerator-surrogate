@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --account=ad:beamphysics
 #SBATCH --partition=ampere
-#SBATCH --job-name=run_cgn_1_4
-#SBATCH --output=logs/run_cgn_1_4_%j.out
-#SBATCH --error=logs/run_cgn_1_4_%j.err
+#SBATCH --job-name=run_mgn_1_4
+#SBATCH --output=logs/run_mgn_1_4_%j.out
+#SBATCH --error=logs/run_mgn_1_4_%j.err
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --gpus-per-node=4
@@ -31,23 +31,23 @@ echo "Start time: $(date)"
 BASE_DATA_DIR="/sdf/data/ad/ard/u/tiffan/data/"
 BASE_RESULTS_DIR="/sdf/data/ad/ard/u/tiffan/results/"
 
-MODEL="cgn"
+MODEL="mgn"
 DATASET="graph_data_filtered_total_charge_51"  # Replace with your actual dataset name
 DATA_KEYWORD="knn_k5_weighted"
 TASK="predict_n6d"             # Replace with your specific task
 MODE="train"
-NTRAIN=4156
+NTRAIN=128
 BATCH_SIZE=16
-NEPOCHS=3000
-HIDDEN_DIM=128
+NEPOCHS=100
+HIDDEN_DIM=256
 NUM_LAYERS=6                   # Must be even for autoencoders (encoder + decoder)
 
 # Learning rate scheduler parameters
-LR=1e-4
+LR=1e-3
 LR_SCHEDULER="lin"
-LIN_START_EPOCH=100
+LIN_START_EPOCH=10
 LIN_END_EPOCH=1000
-LIN_FINAL_LR=1e-5
+LIN_FINAL_LR=5e-5
 
 # Random seed for reproducibility
 RANDOM_SEED=63
@@ -56,7 +56,7 @@ RANDOM_SEED=63
 # Construct the Python Command with All Required Arguments
 # =============================================================================
 
-python_command="src/graph_models/context_train.py \
+python_command="src/graph_models/train_accelerate_wandb.py \
     --model $MODEL \
     --dataset $DATASET \
     --task $TASK \

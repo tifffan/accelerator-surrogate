@@ -56,7 +56,7 @@ LIN_FINAL_LR=1e-5
 RANDOM_SEED=63
 
 # CHECKPOINT=None
-CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/gat/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b4_lr0.0001_h256_ly6_pr1.00_ep3000_sch_lin_400_4000_1e-05_heads4/checkpoints/model-1809.pth"
+CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/gat/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b4_lr0.0001_h256_ly6_pr1.00_ep3000_sch_lin_400_4000_1e-05_heads4/checkpoints/model-2899.pth"
 
 # =============================================================================
 # Construct the Python Command with All Required Arguments

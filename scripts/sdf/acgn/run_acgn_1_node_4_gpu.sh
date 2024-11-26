@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --account=ad:beamphysics
 #SBATCH --partition=ampere
-#SBATCH --job-name=run_cgn_1_4
-#SBATCH --output=logs/run_cgn_1_4_%j.out
-#SBATCH --error=logs/run_cgn_1_4_%j.err
+#SBATCH --job-name=run_acgn_1_4
+#SBATCH --output=logs/run_acgn_1_4_%j.out
+#SBATCH --error=logs/run_acgn_1_4_%j.err
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --gpus-per-node=4
@@ -31,7 +31,7 @@ echo "Start time: $(date)"
 BASE_DATA_DIR="/sdf/data/ad/ard/u/tiffan/data/"
 BASE_RESULTS_DIR="/sdf/data/ad/ard/u/tiffan/results/"
 
-MODEL="cgn"
+MODEL="acgn"
 DATASET="graph_data_filtered_total_charge_51"  # Replace with your actual dataset name
 DATA_KEYWORD="knn_k5_weighted"
 TASK="predict_n6d"             # Replace with your specific task

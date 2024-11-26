@@ -1,14 +1,14 @@
 #!/bin/bash
 #SBATCH --account=ad:beamphysics
 #SBATCH --partition=ampere
-#SBATCH --job-name=run_cgn_1_4
-#SBATCH --output=logs/run_cgn_1_4_%j.out
-#SBATCH --error=logs/run_cgn_1_4_%j.err
+#SBATCH --job-name=run_pointnet_training
+#SBATCH --output=logs/run_pointnet_%j.out
+#SBATCH --error=logs/run_pointnet_%j.err
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --gpus-per-node=4
 #SBATCH --nodes=1
-#SBATCH --mem-per-cpu=16G
+#SBATCH --mem-per-cpu=64G
 #SBATCH --time=33:30:00
 
 # Set the PYTHONPATH to include your project directory
@@ -28,53 +28,83 @@ echo "Start time: $(date)"
 # Define Variables for Training
 # =============================================================================
 
-BASE_DATA_DIR="/sdf/data/ad/ard/u/tiffan/data/"
-BASE_RESULTS_DIR="/sdf/data/ad/ard/u/tiffan/results/"
+# Data paths
+DATA_CATALOG="src/points_models/catalogs/electrons_vary_distributions_vary_settings_filtered_total_charge_51_catalog_train_sdf.csv"
+STATISTICS_FILE="src/points_models/catalogs/global_statistics_filtered_total_charge_51_train.txt"
 
-MODEL="cgn"
-DATASET="graph_data_filtered_total_charge_51"  # Replace with your actual dataset name
-DATA_KEYWORD="knn_k5_weighted"
-TASK="predict_n6d"             # Replace with your specific task
-MODE="train"
-NTRAIN=4156
-BATCH_SIZE=16
-NEPOCHS=3000
-HIDDEN_DIM=128
-NUM_LAYERS=6                   # Must be even for autoencoders (encoder + decoder)
+# Training parameters
+BATCH_SIZE=1
+N_TRAIN=4156
+N_VAL=0
+N_TEST=0
+RANDOM_SEED=63
+
+NUM_EPOCHS=2000
+HIDDEN_DIM=64
+NUM_LAYERS=4
+
+LEARNING_RATE=1e-2
+WEIGHT_DECAY=1e-4
+
+# Model and results
+MODEL="pn0"
+BASE_RESULTS_DIR="/sdf/data/ad/ard/u/tiffan/points_results/"
+CHECKPOINT="/sdf/data/ad/ard/u/tiffan/points_results/pn0/hd64_nl4_bs1_lr0.01_wd0.0001_ep2000_r63/checkpoints/model-529.pth"  # Path to checkpoint if resuming training; leave empty if starting fresh
 
 # Learning rate scheduler parameters
-LR=1e-4
-LR_SCHEDULER="lin"
-LIN_START_EPOCH=100
-LIN_END_EPOCH=1000
-LIN_FINAL_LR=1e-5
+# LR_SCHEDULER="exp"  # Options: 'exp', 'lin', or None
+# EXP_DECAY_RATE=0.001
+# EXP_START_EPOCH=100
+# LIN_START_EPOCH=10
+# LIN_END_EPOCH=1000
+# LIN_FINAL_LR=1e-4
 
-# Random seed for reproducibility
-RANDOM_SEED=63
+# Verbose output
+# VERBOSE="--verbose"
+VERBOSE=""
+# WandB settings
+# WANDB_PROJECT="points-training"
+# WANDB_RUN_NAME="pointnet_run"
 
 # =============================================================================
 # Construct the Python Command with All Required Arguments
 # =============================================================================
 
-python_command="src/graph_models/context_train.py \
-    --model $MODEL \
-    --dataset $DATASET \
-    --task $TASK \
-    --data_keyword $DATA_KEYWORD \
-    --base_data_dir $BASE_DATA_DIR \
-    --base_results_dir $BASE_RESULTS_DIR \
-    --mode $MODE \
-    --ntrain $NTRAIN \
+python_command="src/points_models/train.py \
+    --data_catalog $DATA_CATALOG \
+    --statistics_file $STATISTICS_FILE \
     --batch_size $BATCH_SIZE \
-    --nepochs $NEPOCHS \
+    --n_train $N_TRAIN \
+    --n_val $N_VAL \
+    --n_test $N_TEST \
+    --random_seed $RANDOM_SEED \
+    --num_epochs $NUM_EPOCHS \
     --hidden_dim $HIDDEN_DIM \
     --num_layers $NUM_LAYERS \
-    --lr $LR \
-    --lr_scheduler $LR_SCHEDULER \
-    --lin_start_epoch $((LIN_START_EPOCH * SLURM_JOB_NUM_NODES * SLURM_GPUS_PER_NODE)) \
-    --lin_end_epoch $((LIN_END_EPOCH * SLURM_JOB_NUM_NODES * SLURM_GPUS_PER_NODE)) \
-    --lin_final_lr $LIN_FINAL_LR \
-    --random_seed $RANDOM_SEED"
+    --learning_rate $LEARNING_RATE \
+    --weight_decay $WEIGHT_DECAY \
+    --model $MODEL \
+    --base_results_dir $BASE_RESULTS_DIR \
+    $VERBOSE"
+
+# Add checkpoint argument if provided
+if [ -n "$CHECKPOINT" ]; then
+    python_command="$python_command --checkpoint $CHECKPOINT"
+fi
+
+# Add scheduler arguments if scheduler is used
+if [ "$LR_SCHEDULER" = "exp" ]; then
+    python_command="$python_command \
+        --lr_scheduler $LR_SCHEDULER \
+        --exp_decay_rate $EXP_DECAY_RATE \
+        --exp_start_epoch $((EXP_START_EPOCH * SLURM_JOB_NUM_NODES * SLURM_GPUS_PER_NODE))"
+elif [ "$LR_SCHEDULER" = "lin" ]; then
+    python_command="$python_command \
+        --lr_scheduler $LR_SCHEDULER \
+        --lin_start_epoch $((LIN_START_EPOCH * SLURM_JOB_NUM_NODES * SLURM_GPUS_PER_NODE)) \
+        --lin_end_epoch $((LIN_END_EPOCH * SLURM_JOB_NUM_NODES * SLURM_GPUS_PER_NODE)) \
+        --lin_final_lr $LIN_FINAL_LR"
+fi
 
 # =============================================================================
 # Execute the Training

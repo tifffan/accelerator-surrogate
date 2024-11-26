@@ -46,7 +46,7 @@ if __name__ == "__main__":
     
     # Prepare WandB config
     wandb_config = {
-        "project": "graph-learning",
+        "project": "graph-training",
         "config": vars(args),
         "name": args.results_folder,
     }

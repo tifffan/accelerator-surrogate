@@ -47,7 +47,7 @@ LEARNING_RATE=1e-3
 WEIGHT_DECAY=1e-4
 
 # Model and results
-MODEL="PointNet1"
+MODEL="pn0"
 BASE_RESULTS_DIR="/sdf/data/ad/ard/u/tiffan/points_results/"
 CHECKPOINT=""  # Path to checkpoint if resuming training; leave empty if starting fresh
 
