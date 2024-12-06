@@ -103,7 +103,7 @@ if __name__ == "__main__":
         n_val=args.nval,
         n_test=args.ntest,
     )
-    logging.info(f"Initialized StepPairGraphDataLoaders with n_train={args.n_train}, n_val={args.n_val}, n_test={args.n_test}")
+    logging.info(f"Initialized StepPairGraphDataLoaders with n_train={args.ntrain}, n_val={args.nval}, n_test={args.ntest}")
 
     # Get data loaders
     train_loader = data_loaders.get_train_loader()
@@ -498,7 +498,8 @@ if __name__ == "__main__":
     # Initialize trainer with the loss function
     trainer = GraphPredictionTrainer(
         model=model,
-        dataloader=dataloader,
+        train_loader=train_loader,
+        val_loader=val_loader,
         optimizer=optimizer,
         scheduler=scheduler,
         nepochs=args.nepochs,
