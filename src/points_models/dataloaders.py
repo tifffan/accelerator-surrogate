@@ -196,8 +196,8 @@ class PointsDataLoaders:
 
 
 if __name__ == "__main__":
-    data_catalog = '/global/homes/t/tiffan/slac-point/data/catalogs/electrons_vary_distributions_vary_settings_catalog.csv'
-    statistics_file = '/global/homes/t/tiffan/slac-point/data/catalogs/global_statistics.txt'
+    data_catalog = '/sdf/home/t/tiffan/repo/accelerator-surrogate/src/points_models/catalogs/electrons_vary_distributions_vary_settings_filtered_total_charge_51_catalog_test_sdf.csv'
+    statistics_file = '/sdf/home/t/tiffan/repo/accelerator-surrogate/src/points_models/catalogs/global_statistics_filtered_total_charge_51_train.txt'
 
     # Parameters
     batch_size = 64
@@ -207,7 +207,7 @@ if __name__ == "__main__":
     random_seed = 123
 
     # Initialize the DataLoaders
-    data_loaders = ElectronBeamDataLoaders(
+    data_loaders = PointsDataLoaders(
         data_catalog=data_catalog,
         statistics_file=statistics_file,
         batch_size=batch_size,

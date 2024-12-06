@@ -39,6 +39,28 @@ from src.graph_models.models.multiscale.gnn import (
     TopkMultiscaleGNN
 )
 
+def load_global_statistics(statistics_file):
+    """Load global mean and standard deviation from a file."""
+    with open(statistics_file, 'r') as f:
+        lines = f.readlines()
+        # Assuming the file format is:
+        # Line 1: 'Global Mean'
+        # Line 2: comma-separated mean values
+        # Line 3: 'Global Std'
+        # Line 4: comma-separated std values
+
+        # Extract and parse Global Mean
+        mean_line = lines[1].strip()
+        mean_values = [float(x) for x in mean_line.split(',')]
+        global_mean = torch.tensor(mean_values, dtype=torch.float32)
+
+        # Extract and parse Global Std
+        std_line = lines[3].strip()
+        std_values = [float(x) for x in std_line.split(',')]
+        global_std = torch.tensor(std_values, dtype=torch.float32)
+
+    return global_mean, global_std
+
 def parse_hyperparameters_from_folder_name(folder_name):
     """
     Parses hyperparameters from the folder name and returns them as a dictionary.
@@ -640,7 +662,69 @@ def initialize_model(hyperparams, sample):
 
         return model
 
-def evaluate_model(model, dataloader, device, metadata_final_path, results_folder):
+# def evaluate_model(model, dataloader, device, metadata_final_path, results_folder):
+#     model.eval()
+#     all_errors = []
+#     all_predictions = []
+#     all_targets = []
+#     all_relative_errors_x = []
+#     all_relative_errors_y = []
+#     all_relative_errors_z = []
+    
+#     with torch.no_grad():
+#         for data in tqdm(dataloader, desc="Evaluating Model"):
+#             data = data.to(device)
+#             x_pred = model_forward(model, data)
+#             mse = F.mse_loss(x_pred, data.y, reduction='none').mean(dim=1)
+#             batch_indices = data.batch.cpu().numpy()
+#             graph_indices = np.unique(batch_indices)
+#             for idx in graph_indices:
+#                 mask = (batch_indices == idx)
+#                 graph_mse = mse[mask].mean().item()
+#                 all_errors.append(graph_mse)
+#                 all_predictions.append(x_pred[mask].cpu())
+#                 all_targets.append(data.y[mask].cpu())
+    
+#     all_errors = np.array(all_errors)
+#     global_mean, global_std = load_global_statistics(metadata_final_path)
+
+#     def inverse_normalize(normalized_data):
+#         return normalized_data * global_std + global_mean
+
+#     for pred, target in zip(all_predictions, all_targets):
+#         pred_original = inverse_normalize(pred)
+#         target_original = inverse_normalize(target)
+        
+#         pred_pg = transform_to_particle_group(pred_original)
+#         target_pg = transform_to_particle_group(target_original)
+        
+#         pred_norm_emit_x = compute_normalized_emittance_x(pred_pg)
+#         target_norm_emit_x = compute_normalized_emittance_x(target_pg)
+#         relative_error_x = abs(pred_norm_emit_x - target_norm_emit_x) / abs(target_norm_emit_x)
+#         all_relative_errors_x.append(relative_error_x)
+
+#         # Compute norm emittance y
+#         pred_norm_emit_y = compute_normalized_emittance_y(pred_pg)
+#         target_norm_emit_y = compute_normalized_emittance_y(target_pg)
+#         relative_error_y = abs(pred_norm_emit_y - target_norm_emit_y) / abs(target_norm_emit_y)
+#         all_relative_errors_y.append(relative_error_y)
+
+#         # Compute norm emittance z
+#         pred_norm_emit_z = compute_normalized_emittance_z(pred_pg)
+#         target_norm_emit_z = compute_normalized_emittance_z(target_pg)
+#         relative_error_z = abs(pred_norm_emit_z - target_norm_emit_z) / abs(target_norm_emit_z)
+#         all_relative_errors_z.append(relative_error_z)
+    
+#     # Compute overall average relative errors
+#     avg_relative_error_x = np.mean(all_relative_errors_x)
+#     avg_relative_error_y = np.mean(all_relative_errors_y)
+#     avg_relative_error_z = np.mean(all_relative_errors_z)
+    
+#     logging.info(f"Average Relative Error in norm_emittance_x: {avg_relative_error_x:.4f}")
+#     logging.info(f"Average Relative Error in norm_emittance_y: {avg_relative_error_y:.4f}")
+#     logging.info(f"Average Relative Error in norm_emittance_z: {avg_relative_error_z:.4f}")
+
+def evaluate_model(model, dataloader, device, statistics_file, results_folder):
     model.eval()
     all_errors = []
     all_predictions = []
@@ -648,7 +732,32 @@ def evaluate_model(model, dataloader, device, metadata_final_path, results_folde
     all_relative_errors_x = []
     all_relative_errors_y = []
     all_relative_errors_z = []
-    
+    all_settings = []
+
+    # Load global statistics
+    global_mean, global_std = load_global_statistics(statistics_file)
+    global_mean_initial = global_mean[:6]
+    global_std_initial = global_std[:6]
+    global_mean_final = global_mean[6:12]
+    global_std_final = global_std[6:12]
+    global_mean_settings = global_mean[12:]
+    global_std_settings = global_std[12:]
+
+    def inverse_normalize(data, mean, std):
+        # Ensure data is a PyTorch tensor
+        if isinstance(data, np.ndarray):
+            data = torch.tensor(data, dtype=torch.float32)
+        elif not isinstance(data, torch.Tensor):
+            raise TypeError(f"Unsupported data type for 'data': {type(data)}. Must be numpy.ndarray or torch.Tensor.")
+
+        # Ensure mean and std are PyTorch tensors
+        if not isinstance(mean, torch.Tensor):
+            raise TypeError(f"Unsupported data type for 'mean': {type(mean)}. Must be torch.Tensor.")
+        if not isinstance(std, torch.Tensor):
+            raise TypeError(f"Unsupported data type for 'std': {type(std)}. Must be torch.Tensor.")
+        
+        return  data * std + mean
+
     with torch.no_grad():
         for data in tqdm(dataloader, desc="Evaluating Model"):
             data = data.to(device)
@@ -662,20 +771,18 @@ def evaluate_model(model, dataloader, device, metadata_final_path, results_folde
                 all_errors.append(graph_mse)
                 all_predictions.append(x_pred[mask].cpu())
                 all_targets.append(data.y[mask].cpu())
-    
-    all_errors = np.array(all_errors)
-    global_mean, global_std = load_global_statistics(metadata_final_path)
+                all_settings.append(data.x[mask][0, 6:].cpu())
 
-    def inverse_normalize(normalized_data):
-        return normalized_data * global_std + global_mean
+    all_errors = np.array(all_errors)
 
     for pred, target in zip(all_predictions, all_targets):
-        pred_original = inverse_normalize(pred)
-        target_original = inverse_normalize(target)
-        
+        pred_original = inverse_normalize(pred, global_mean_final, global_std_final)
+        target_original = inverse_normalize(target, global_mean_final, global_std_final)
+
         pred_pg = transform_to_particle_group(pred_original)
         target_pg = transform_to_particle_group(target_original)
-        
+
+        # Compute norm emittance x
         pred_norm_emit_x = compute_normalized_emittance_x(pred_pg)
         target_norm_emit_x = compute_normalized_emittance_x(target_pg)
         relative_error_x = abs(pred_norm_emit_x - target_norm_emit_x) / abs(target_norm_emit_x)
@@ -692,15 +799,47 @@ def evaluate_model(model, dataloader, device, metadata_final_path, results_folde
         target_norm_emit_z = compute_normalized_emittance_z(target_pg)
         relative_error_z = abs(pred_norm_emit_z - target_norm_emit_z) / abs(target_norm_emit_z)
         all_relative_errors_z.append(relative_error_z)
+
+    # Top 5% highest MSE
+    top_5_percent_indices = np.argsort(all_errors)[-int(0.05 * len(all_errors)):]
+    top_settings = torch.cat([all_settings[i].unsqueeze(0) for i in top_5_percent_indices], dim=0).numpy()
+    top_settings_original = inverse_normalize(top_settings, global_mean_settings, global_std_settings)
+
+    # Plot histograms for each setting
+    settings_names = [
+        'CQ10121_b1_gradient',
+        'GUNF_rf_field_scale',
+        'GUNF_theta0_deg',
+        'SOL10111_solenoid_field_scale',
+        'SQ10122_b1_gradient',
+        'distgen_total_charge',
+    ]
+
+    # fig, axes = plt.subplots(3, 2, figsize=(12, 18))  # 3 rows x 2 columns for 6 settings
+    # axes = axes.flatten()
+
+    # for i, setting_name in enumerate(settings_names):
+    #     axes[i].hist(top_settings_original[:, i], bins=50, alpha=0.7, label=setting_name)
+    #     axes[i].set_xlabel(f'{setting_name} (Original Units)')
+    #     axes[i].set_ylabel('Frequency')
+    #     axes[i].set_title(f'Histogram of {setting_name}')
+    #     axes[i].legend()
     
-    # Compute overall average relative errors
-    avg_relative_error_x = np.mean(all_relative_errors_x)
-    avg_relative_error_y = np.mean(all_relative_errors_y)
-    avg_relative_error_z = np.mean(all_relative_errors_z)
-    
-    logging.info(f"Average Relative Error in norm_emittance_x: {avg_relative_error_x:.4f}")
-    logging.info(f"Average Relative Error in norm_emittance_y: {avg_relative_error_y:.4f}")
-    logging.info(f"Average Relative Error in norm_emittance_z: {avg_relative_error_z:.4f}")
+    plt.figure(figsize=(12, 10))
+    for i, setting_name in enumerate(settings_names):
+        data = top_settings_original[:, i]
+        plt.subplot(3, 2, i+1)
+        plt.hist(data, bins=50, alpha=0.7)
+        plt.title(setting_name)
+        plt.xlabel('Value')
+        plt.ylabel('Frequency')
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(results_folder, 'histograms_top5_percent_settings.png'))
+    plt.close()
+
+    logging.info("Histograms for top 5% MSE settings saved.")
+
 
 
 def model_forward(model, data):
@@ -753,14 +892,14 @@ def model_forward(model, data):
         )
     return x_pred
 
-def load_global_statistics(metadata_final_path):
-    """Load global mean and standard deviation from a file."""
-    with open(metadata_final_path, 'r') as f:
-        metadata_final = json.load(f)
-    global_mean_final = torch.tensor(metadata_final['global_mean'])
-    global_std_final = torch.tensor(metadata_final['global_std'])
+# def load_global_statistics(metadata_final_path):
+#     """Load global mean and standard deviation from a file."""
+#     with open(metadata_final_path, 'r') as f:
+#         metadata_final = json.load(f)
+#     global_mean_final = torch.tensor(metadata_final['global_mean'])
+#     global_std_final = torch.tensor(metadata_final['global_std'])
 
-    return global_mean_final, global_std_final
+#     return global_mean_final, global_std_final
 
 def main():
     parser = argparse.ArgumentParser(description="Evaluate a model checkpoint")
@@ -853,9 +992,11 @@ def main():
     if not os.path.exists(metadata_final_path):
         logging.error(f"metadata.json not found at {metadata_final_path}")
         sys.exit(1)
+        
+    statistics_file = "/sdf/home/t/tiffan/repo/accelerator-surrogate/src/points_models/catalogs/global_statistics_filtered_total_charge_51_train.txt"
 
     # Evaluate model
-    evaluate_model(model, dataloader, device, metadata_final_path, results_folder)
+    evaluate_model(model, dataloader, device, statistics_file, results_folder)
 
 if __name__ == "__main__":
     main()

@@ -33,28 +33,33 @@ DATA_CATALOG="src/points_models/catalogs/electrons_vary_distributions_vary_setti
 STATISTICS_FILE="src/points_models/catalogs/global_statistics_filtered_total_charge_51_train.txt"
 
 # Training parameters
-BATCH_SIZE=1
-N_TRAIN=4156
-N_VAL=0
-N_TEST=0
+BATCH_SIZE=32
+# N_TRAIN=4156
+# N_VAL=0
+N_TRAIN=3324
+N_VAL=416
+N_TEST=416
+# N_TRAIN=128
+# N_VAL=128
+# N_TEST=0
 RANDOM_SEED=63
 
 NUM_EPOCHS=2000
 HIDDEN_DIM=64
 NUM_LAYERS=4
 
-LEARNING_RATE=1e-2
-WEIGHT_DECAY=1e-4
+LEARNING_RATE=1e-3
+WEIGHT_DECAY=0
 
 # Model and results
 MODEL="pn0"
 BASE_RESULTS_DIR="/sdf/data/ad/ard/u/tiffan/points_results/"
-CHECKPOINT="/sdf/data/ad/ard/u/tiffan/points_results/pn0/hd64_nl4_bs1_lr0.01_wd0.0001_ep2000_r63/checkpoints/model-529.pth"  # Path to checkpoint if resuming training; leave empty if starting fresh
+# CHECKPOINT="/sdf/data/ad/ard/u/tiffan/points_results/pn0/hd64_nl4_bs1_lr0.01_wd0.0001_ep2000_r63/checkpoints/model-1999.pth"  # Path to checkpoint if resuming training; leave empty if starting fresh
 
 # Learning rate scheduler parameters
-# LR_SCHEDULER="exp"  # Options: 'exp', 'lin', or None
-# EXP_DECAY_RATE=0.001
-# EXP_START_EPOCH=100
+LR_SCHEDULER="exp"  # Options: 'exp', 'lin', or None
+EXP_DECAY_RATE=0.001
+EXP_START_EPOCH=100
 # LIN_START_EPOCH=10
 # LIN_END_EPOCH=1000
 # LIN_FINAL_LR=1e-4

@@ -19,7 +19,7 @@ def generate_results_folder_name(args):
 
     # Incorporate model name
     base_results_dir = os.path.join(base_results_dir, args.model)
-    
+
     # Incorporate dataset name
     base_results_dir = os.path.join(base_results_dir, args.dataset)
 
@@ -30,7 +30,8 @@ def generate_results_folder_name(args):
     parts = []
     parts.append(f"{args.data_keyword}")
     parts.append(f"r{args.random_seed}")
-    parts.append(f"nt{args.ntrain if args.ntrain is not None else 'all'}")
+    parts.append(f"nt{args.n_train}")
+    parts.append(f"nv{args.n_val}")
     parts.append(f"b{args.batch_size}")
     parts.append(f"lr{args.lr}")
     parts.append(f"h{args.hidden_dim}")
@@ -45,33 +46,22 @@ def generate_results_folder_name(args):
         parts.append(f"sch_lin_{args.lin_start_epoch}_{args.lin_end_epoch}_{args.lin_final_lr}")
 
     # Model-specific arguments
-    if args.model == 'gcn' or args.model == 'gcn-ae':
-        pass
-    elif args.model == 'gat' or args.model == 'gat-ae':
+    if args.model in ['gcn', 'gcn-ae']:
+        pass  # No additional parameters
+    elif args.model in ['gat', 'gat-ae']:
         parts.append(f"heads{args.gat_heads}")
-    elif args.model == 'gtr' or args.model == 'gtr-ae':
+    elif args.model in ['gtr', 'gtr-ae']:
         parts.append(f"heads{args.gtr_heads}")
         parts.append(f"concat{args.gtr_concat}")
         parts.append(f"dropout{args.gtr_dropout}")
-    elif args.model == 'mgn' or args.model == 'mgn-ae':
-        pass
-    elif args.model == 'intgnn':
-        pass  # TODO: Append any intgnn-specific parameters
+    elif args.model in ['mgn', 'mgn-ae']:
+        pass  # No additional parameters
     elif args.model == 'singlescale':
-        pass
-    elif args.model == 'multiscale' or args.model == 'multiscale-topk':
+        pass  # No additional parameters
+    elif args.model in ['multiscale', 'multiscale-topk']:
         parts.append(f"mlph{args.multiscale_n_mlp_hidden_layers}")
         parts.append(f"mmply{args.multiscale_n_mmp_layers}")
         parts.append(f"mply{args.multiscale_n_message_passing_layers}")
-    elif args.model == 'ggn':
-        # GeneralGraphNetwork may not have specific parameters to include
-        pass
-    elif args.model == 'cgn':
-        # ConditionalGraphNetwork may not have specific parameters to include
-        pass
-    elif args.model == 'acgn':
-        # AttentionConditionalGraphNetwork may have the number of attention heads
-        parts.append(f"heads{args.num_heads}")
     else:
         logging.warning(f"Model '{args.model}' is not recognized for specific parameters in folder naming.")
 

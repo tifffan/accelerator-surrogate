@@ -5,7 +5,7 @@ from tqdm import tqdm
 import logging
 import matplotlib.pyplot as plt
 from pathlib import Path
-from models import PointNet1, PointNet2, PointNet3, PointNetRegression
+from models import PointNet1, PointNet2, PointNet3, PointNetRegression, PointNetRegression_SettingsAtStart, PointNetRegression_SettingsAtMiddle, PointNetRegression_SettingsAtGlobal
 
 from accelerate import Accelerator
 
@@ -22,6 +22,12 @@ def identify_model_type(model):
         return 'PointNet2'
     elif isinstance(model, PointNet3):
         return 'PointNet3'
+    elif isinstance(model, PointNetRegression_SettingsAtStart):
+        return 'PointNetRegression_SettingsAtStart'
+    elif isinstance(model, PointNetRegression_SettingsAtMiddle):
+        return 'PointNetRegression_SettingsAtMiddle'
+    elif isinstance(model, PointNetRegression_SettingsAtGlobal):
+        return 'PointNetRegression_SettingsAtGlobal'
     else:
         return 'UnknownModel'
 
@@ -50,6 +56,11 @@ class BaseTrainer:
         self.results_folder.mkdir(parents=True, exist_ok=True)
         self.loss_history = []
         self.val_loss_history = []
+        
+        # Best validation loss tracker
+        self.best_val_loss = float('inf')
+        self.best_epoch = -1
+        
         self.verbose = kwargs.get('verbose', False)
         self.wandb_logger = None
         
@@ -103,10 +114,10 @@ class BaseTrainer:
     
     def train(self):
         logging.info("Starting training...")
-        self.accelerator.wait_for_everyone()
         for epoch in range(self.start_epoch, self.num_epochs):
             self.model.train()
             running_loss = 0.0
+            save_current_epoch = False
             # Adjust progress bar for distributed training
             if self.verbose and self.accelerator.is_main_process:
                 progress_bar = tqdm(self.train_loader, desc=f"Epoch {epoch+1}/{self.num_epochs}")
@@ -115,6 +126,7 @@ class BaseTrainer:
             for batch_idx, batch in enumerate(progress_bar):
                 # Zero the parameter gradients
                 self.optimizer.zero_grad()
+                self.accelerator.wait_for_everyone()
 
                 # Compute loss
                 loss = self.train_step(batch)
@@ -164,12 +176,25 @@ class BaseTrainer:
 
             # Save checkpoint
             if (epoch + 1) % self.save_checkpoint_every == 0 or (epoch + 1) == self.num_epochs:
+                # logging.info(f"Saving checkpoint at epoch {epoch+1}")
                 self.save_checkpoint(epoch)
+                
+                if self.val_loader:
+                    val_loss = self.validate_all_threads()
+                
+                    # Check and save the best model
+                    if val_loss is not None and val_loss < self.best_val_loss:
+                        # logging.info(f"New best model found at epoch {epoch+1} with Val Loss: {val_loss:.4f}")
+                        self.best_val_loss = val_loss
+                        self.best_epoch = epoch + 1
+                        # logging.info(f"self.best_epoch is updated to epoch {epoch+1}")
+                        self.save_checkpoint(epoch, best=True)
 
         # Plot loss convergence
         if self.accelerator.is_main_process:
             self.plot_loss_convergence()
             logging.info("Training complete!")
+            logging.info(f"Best Val Loss: {self.best_val_loss:.4f} at epoch {self.best_epoch}")
 
     def validate(self):
         self.model.eval()
@@ -180,6 +205,29 @@ class BaseTrainer:
                 val_loss += loss.item()
         val_loss /= len(self.val_loader)
         return val_loss
+    
+    def validate_all_threads(self):
+        self.model.eval()
+        val_loss = 0.0
+        num_batches = 0
+        with torch.no_grad():
+            for batch in self.val_loader:
+                loss = self.validate_step(batch)
+                val_loss += loss.item()
+                num_batches += 1
+
+        # Convert to tensors for aggregation
+        total_val_loss = torch.tensor(val_loss, device=self.accelerator.device)
+        total_num_batches = torch.tensor(num_batches, device=self.accelerator.device)
+
+        # Aggregate the losses across all processes
+        total_val_loss = self.accelerator.gather(total_val_loss).sum()
+        total_num_batches = self.accelerator.gather(total_num_batches).sum()
+
+        # Compute the average validation loss
+        avg_val_loss = total_val_loss / total_num_batches
+
+        return avg_val_loss.item()
 
     def train_step(self, batch):
         raise NotImplementedError
@@ -187,10 +235,13 @@ class BaseTrainer:
     def validate_step(self, batch):
         raise NotImplementedError
 
-    def save_checkpoint(self, epoch):
-        # Unwrap the model to get the original model (not wrapped by accelerator)
+    def save_checkpoint(self, epoch, best=False):
+        # Unwrap the model to get the original model
+        self.accelerator.wait_for_everyone()        
         unwrapped_model = self.accelerator.unwrap_model(self.model)
         checkpoint_path = self.checkpoints_folder / f'model-{epoch}.pth'
+        if best:
+            checkpoint_path = self.checkpoints_folder / f'best_model.pth'
         # Prepare checkpoint data
         checkpoint_data = {
             'model_state_dict': unwrapped_model.state_dict(),
@@ -200,9 +251,10 @@ class BaseTrainer:
             'random_seed': self.random_seed,
             'loss_history': self.loss_history,
             'val_loss_history': self.val_loss_history,
+            'best_val_loss': self.best_val_loss,
+            'best_epoch': self.best_epoch,
         }
-        # Use accelerator's save method
-        self.accelerator.wait_for_everyone()
+        # Use accelerator's save method        
         if self.accelerator.is_main_process:
             self.accelerator.save(checkpoint_data, checkpoint_path)
             logging.info(f"Model checkpoint saved to {checkpoint_path}")
@@ -224,6 +276,10 @@ class BaseTrainer:
             self.loss_history = checkpoint['loss_history']
         if 'val_loss_history' in checkpoint:
             self.val_loss_history = checkpoint['val_loss_history']
+        if 'best_val_loss' in checkpoint:
+            self.best_val_loss = checkpoint['best_val_loss']
+        if 'best_epoch' in checkpoint:
+            self.best_epoch = checkpoint['best_epoch']
         logging.info(f"Resumed training from epoch {self.start_epoch}")
 
     def plot_loss_convergence(self):

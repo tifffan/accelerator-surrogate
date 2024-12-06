@@ -6,7 +6,10 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Train and evaluate graph-based models.")
 
     # Common arguments
-    parser.add_argument('--model', type=str, required=True, choices=['intgnn', 'gcn', 'gat', 'gtr', 'mgn', 'gcn-ae', 'gat-ae', 'gtr-ae', 'mgn-ae', 'multiscale', 'multiscale-topk'], help="Model to train.")
+    parser.add_argument('--model', type=str, required=True,
+                        choices=['gcn', 'gat', 'gtr', 'mgn', 'gcn-ae', 'gat-ae', 'gtr-ae', 'mgn-ae',
+                                 'multiscale', 'multiscale-topk', 'singlescale'],
+                        help="Model to train.")
     parser.add_argument('--data_keyword', type=str, required=True, help="Common keyword to infer data directories")
     parser.add_argument('--base_data_dir', type=str, default="/sdf/data/ad/ard/u/tiffan/data/",
                         help="Base directory where the data is stored")
@@ -16,7 +19,9 @@ def parse_args():
     parser.add_argument('--dataset', type=str, required=True, help="Dataset identifier")
     parser.add_argument('--task', type=str, required=True, choices=['predict_n6d', 'predict_n4d', 'predict_n2d'],
                         help="Task to perform")
-    parser.add_argument('--ntrain', type=int, default=None, help="Number of training examples to use")
+    parser.add_argument('--n_train', type=int, default=800, help="Number of training samples")
+    parser.add_argument('--n_val', type=int, default=100, help="Number of validation samples")
+    parser.add_argument('--n_test', type=int, default=100, help="Number of test samples")
     parser.add_argument('--nepochs', type=int, default=100, help="Number of training epochs")
     parser.add_argument('--save_checkpoint_every', type=int, default=10, help="Save checkpoint every N epochs")
     parser.add_argument('--lr', type=float, default=1e-4, help="Learning rate for training")
@@ -42,7 +47,7 @@ def parse_args():
     parser.add_argument('--lin_start_epoch', type=int, default=100, help="Start epoch for linear scheduler")
     parser.add_argument('--lin_end_epoch', type=int, default=1000, help="End epoch for linear scheduler")
     parser.add_argument('--lin_final_lr', type=float, default=1e-5, help="Final learning rate for linear scheduler")
-    
+
     # GAT-specific arguments
     parser.add_argument('--gat_heads', type=int, default=1, help="Number of attention heads for GAT layers")
 
@@ -50,7 +55,7 @@ def parse_args():
     parser.add_argument('--gtr_heads', type=int, default=4, help="Number of attention heads for TransformerConv layers")
     parser.add_argument('--gtr_concat', type=bool, default=True, help="Whether to concatenate or average attention head outputs")
     parser.add_argument('--gtr_dropout', type=float, default=0.0, help="Dropout rate for attention coefficients")
-    
+
     # Multiscale-specific arguments
     parser.add_argument('--multiscale_n_mlp_hidden_layers', type=int, default=2,
                         help='Number of hidden layers in MLPs for multiscale models.')

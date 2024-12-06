@@ -1,14 +1,14 @@
 #!/bin/bash
 #SBATCH --account=ad:beamphysics
 #SBATCH --partition=ampere
-#SBATCH --job-name=run_pointnet_training
-#SBATCH --output=logs/run_pointnet_%j.out
-#SBATCH --error=logs/run_pointnet_%j.err
+#SBATCH --job-name=pn0-middle
+#SBATCH --output=logs/run_pointnet_pn0-middle_%j.out
+#SBATCH --error=logs/run_pointnet_pn0-middle_%j.err
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --gpus-per-node=4
 #SBATCH --nodes=1
-#SBATCH --mem-per-cpu=16G
+#SBATCH --mem-per-cpu=64G
 #SBATCH --time=33:30:00
 
 # Set the PYTHONPATH to include your project directory
@@ -33,35 +33,42 @@ DATA_CATALOG="src/points_models/catalogs/electrons_vary_distributions_vary_setti
 STATISTICS_FILE="src/points_models/catalogs/global_statistics_filtered_total_charge_51_train.txt"
 
 # Training parameters
-BATCH_SIZE=16
-N_TRAIN=4156
-N_VAL=0
+BATCH_SIZE=32
+# N_TRAIN=4156
+N_TRAIN=3324
+N_VAL=416
 N_TEST=0
-RANDOM_SEED=123
+# N_TRAIN=128
+# N_VAL=128
+# N_TEST=0
+RANDOM_SEED=63
 
-NUM_EPOCHS=10
+NUM_EPOCHS=1000
 HIDDEN_DIM=64
-NUM_LAYERS=3
+NUM_LAYERS=4
 
 LEARNING_RATE=1e-3
-WEIGHT_DECAY=1e-4
+WEIGHT_DECAY=1e-3
 
 # Model and results
-MODEL="pn0-start"
+MODEL="pn0-middle"
 BASE_RESULTS_DIR="/sdf/data/ad/ard/u/tiffan/points_results/"
-CHECKPOINT=""  # Path to checkpoint if resuming training; leave empty if starting fresh
+CHECKPOINT=""
+# CHECKPOINT="/sdf/data/ad/ard/u/tiffan/points_results/pn0/hd64_nl4_bs1_lr0.01_wd0.0001_ep2000_r63/checkpoints/model-1999.pth"  # Path to checkpoint if resuming training; leave empty if starting fresh
 
 # Learning rate scheduler parameters
-LR_SCHEDULER="lin"  # Options: 'exp', 'lin', or None
+# LR_SCHEDULER="exp"  # Options: 'exp', 'lin', or None
 # EXP_DECAY_RATE=0.001
-# EXP_START_EPOCH=0
+# EXP_START_EPOCH=100
+
+LR_SCHEDULER="lin"  # Options: 'exp', 'lin', or None
 LIN_START_EPOCH=10
 LIN_END_EPOCH=100
-LIN_FINAL_LR=1e-5
+LIN_FINAL_LR=1e-4
 
 # Verbose output
-VERBOSE="--verbose"
-
+# VERBOSE="--verbose"
+VERBOSE=""
 # WandB settings
 # WANDB_PROJECT="points-training"
 # WANDB_RUN_NAME="pointnet_run"
@@ -97,12 +104,12 @@ if [ "$LR_SCHEDULER" = "exp" ]; then
     python_command="$python_command \
         --lr_scheduler $LR_SCHEDULER \
         --exp_decay_rate $EXP_DECAY_RATE \
-        --exp_start_epoch $EXP_START_EPOCH"
+        --exp_start_epoch $((EXP_START_EPOCH * SLURM_JOB_NUM_NODES * SLURM_GPUS_PER_NODE))"
 elif [ "$LR_SCHEDULER" = "lin" ]; then
     python_command="$python_command \
         --lr_scheduler $LR_SCHEDULER \
-        --lin_start_epoch $LIN_START_EPOCH \
-        --lin_end_epoch $LIN_END_EPOCH \
+        --lin_start_epoch $((LIN_START_EPOCH * SLURM_JOB_NUM_NODES * SLURM_GPUS_PER_NODE)) \
+        --lin_end_epoch $((LIN_END_EPOCH * SLURM_JOB_NUM_NODES * SLURM_GPUS_PER_NODE)) \
         --lin_final_lr $LIN_FINAL_LR"
 fi
 

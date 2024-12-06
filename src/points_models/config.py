@@ -30,11 +30,16 @@ def parse_args():
     parser.add_argument('--lin_end_epoch', type=int, default=100, help='End epoch for linear scheduler')
     parser.add_argument('--lin_final_lr', type=float, default=1e-6, help='Final learning rate for linear scheduler')
 
-    parser.add_argument('--model', type=str, default='PointNet1', help='Model name and version')
+    parser.add_argument('--model', type=str, default='pn0', help='Model name and version')
     parser.add_argument('--base_results_dir', type=str, default='./results', help='Base directory for results')
     parser.add_argument('--checkpoint', type=str, default=None, help='Path to checkpoint to resume training')
 
+    parser.add_argument('--save_checkpoint_every', type=int, default=10, help='Save model checkpoints every N epochs')
     parser.add_argument('--verbose', action='store_true', help='Enable verbose output')
+    parser.add_argument('--wandb', action='store_true', help='Enable logging to Weights & Biases')
 
+    # New argument for pn0: STN_dim
+    parser.add_argument('--STN_dim', type=int, default=3, choices=[3, 6],
+                        help='Number of dimensions to apply STN on (3 or 6)')
     args = parser.parse_args()
     return args

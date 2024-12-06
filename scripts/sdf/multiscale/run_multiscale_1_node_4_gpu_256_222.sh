@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --account=ad:beamphysics
 #SBATCH --partition=ampere
-#SBATCH --job-name=run_pointnet_training
-#SBATCH --output=logs/run_pointnet_%j.out
-#SBATCH --error=logs/run_pointnet_%j.err
+#SBATCH --job-name=run_multiscale_1_4
+#SBATCH --output=logs/run_multiscale_1_4_%j.out
+#SBATCH --error=logs/run_multiscale_1_4_%j.err
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --gpus-per-node=4
@@ -28,83 +28,65 @@ echo "Start time: $(date)"
 # Define Variables for Training
 # =============================================================================
 
-# Data paths
-DATA_CATALOG="src/points_models/catalogs/electrons_vary_distributions_vary_settings_filtered_total_charge_51_catalog_train_sdf.csv"
-STATISTICS_FILE="src/points_models/catalogs/global_statistics_filtered_total_charge_51_train.txt"
+BASE_DATA_DIR="/sdf/data/ad/ard/u/tiffan/data/"
+BASE_RESULTS_DIR="/sdf/data/ad/ard/u/tiffan/results/"
 
-# Training parameters
+MODEL="multiscale"
+DATASET="graph_data_filtered_total_charge_51"  # Replace with your actual dataset name
+DATA_KEYWORD="knn_k5_weighted"
+TASK="predict_n6d"             # Replace with your specific task
+MODE="train"
+NTRAIN=4156
 BATCH_SIZE=16
-N_TRAIN=4156
-N_VAL=0
-N_TEST=0
-RANDOM_SEED=123
+NEPOCHS=3000
+HIDDEN_DIM=256
+NUM_LAYERS=6                   # Must be even for autoencoders (encoder + decoder)
 
-NUM_EPOCHS=10
-HIDDEN_DIM=64
-NUM_LAYERS=3
-
-LEARNING_RATE=1e-3
-WEIGHT_DECAY=1e-4
-
-# Model and results
-MODEL="pn0-start"
-BASE_RESULTS_DIR="/sdf/data/ad/ard/u/tiffan/points_results/"
-CHECKPOINT=""  # Path to checkpoint if resuming training; leave empty if starting fresh
+# Multiscale-specific parameters
+MULTISCALE_N_MLP_HIDDEN_LAYERS=2
+MULTISCALE_N_MMP_LAYERS=2
+MULTISCALE_N_MESSAGE_PASSING_LAYERS=2
 
 # Learning rate scheduler parameters
-LR_SCHEDULER="lin"  # Options: 'exp', 'lin', or None
-# EXP_DECAY_RATE=0.001
-# EXP_START_EPOCH=0
+LR=1e-3
+LR_SCHEDULER="lin"
 LIN_START_EPOCH=10
-LIN_END_EPOCH=100
+LIN_END_EPOCH=1000
 LIN_FINAL_LR=1e-5
 
-# Verbose output
-VERBOSE="--verbose"
+# Random seed for reproducibility
+RANDOM_SEED=63
 
-# WandB settings
-# WANDB_PROJECT="points-training"
-# WANDB_RUN_NAME="pointnet_run"
+CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/multiscale/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt4156_b16_lr0.001_h256_ly6_pr1.00_ep3000_sch_lin_40_4000_1e-05_mlph2_mmply2_mply2/checkpoints/model-39.pth"
 
 # =============================================================================
 # Construct the Python Command with All Required Arguments
 # =============================================================================
 
-python_command="src/points_models/train.py \
-    --data_catalog $DATA_CATALOG \
-    --statistics_file $STATISTICS_FILE \
+python_command="src/graph_models/train_accelerate_wandb.py \
+    --model $MODEL \
+    --dataset $DATASET \
+    --task $TASK \
+    --data_keyword $DATA_KEYWORD \
+    --base_data_dir $BASE_DATA_DIR \
+    --base_results_dir $BASE_RESULTS_DIR \
+    --mode $MODE \
+    --ntrain $NTRAIN \
     --batch_size $BATCH_SIZE \
-    --n_train $N_TRAIN \
-    --n_val $N_VAL \
-    --n_test $N_TEST \
-    --random_seed $RANDOM_SEED \
-    --num_epochs $NUM_EPOCHS \
+    --nepochs $NEPOCHS \
     --hidden_dim $HIDDEN_DIM \
     --num_layers $NUM_LAYERS \
-    --learning_rate $LEARNING_RATE \
-    --weight_decay $WEIGHT_DECAY \
-    --model $MODEL \
-    --base_results_dir $BASE_RESULTS_DIR \
-    $VERBOSE"
+    --multiscale_n_mlp_hidden_layers $MULTISCALE_N_MLP_HIDDEN_LAYERS \
+    --multiscale_n_mmp_layers $MULTISCALE_N_MMP_LAYERS \
+    --multiscale_n_message_passing_layers $MULTISCALE_N_MESSAGE_PASSING_LAYERS \
+    --lr $LR \
+    --lr_scheduler $LR_SCHEDULER \
+    --lin_start_epoch $((LIN_START_EPOCH * SLURM_JOB_NUM_NODES * SLURM_GPUS_PER_NODE)) \
+    --lin_end_epoch $((LIN_END_EPOCH * SLURM_JOB_NUM_NODES * SLURM_GPUS_PER_NODE)) \
+    --lin_final_lr $LIN_FINAL_LR \
+    --random_seed $RANDOM_SEED \
+    --checkpoint $CHECKPOINT"
 
-# Add checkpoint argument if provided
-if [ -n "$CHECKPOINT" ]; then
-    python_command="$python_command --checkpoint $CHECKPOINT"
-fi
-
-# Add scheduler arguments if scheduler is used
-if [ "$LR_SCHEDULER" = "exp" ]; then
-    python_command="$python_command \
-        --lr_scheduler $LR_SCHEDULER \
-        --exp_decay_rate $EXP_DECAY_RATE \
-        --exp_start_epoch $EXP_START_EPOCH"
-elif [ "$LR_SCHEDULER" = "lin" ]; then
-    python_command="$python_command \
-        --lr_scheduler $LR_SCHEDULER \
-        --lin_start_epoch $LIN_START_EPOCH \
-        --lin_end_epoch $LIN_END_EPOCH \
-        --lin_final_lr $LIN_FINAL_LR"
-fi
 
 # =============================================================================
 # Execute the Training

@@ -175,124 +175,6 @@ class PointNet2(nn.Module):
 
 # ==============================================================================================================
 
-# # Modify STN3d to STNkd with k=6 for 6D input
-# class STNkd(nn.Module):
-#     def __init__(self, k=6):
-#         super(STNkd, self).__init__()
-#         self.conv1 = torch.nn.Conv1d(k, 64, 1)
-#         self.conv2 = torch.nn.Conv1d(64, 128, 1)
-#         self.conv3 = torch.nn.Conv1d(128, 1024, 1)
-#         self.fc1 = nn.Linear(1024, 512)
-#         self.fc2 = nn.Linear(512, 256)
-#         self.fc3 = nn.Linear(256, k * k)
-#         self.relu = nn.ReLU()
-
-#         self.bn1 = nn.BatchNorm1d(64)
-#         self.bn2 = nn.BatchNorm1d(128)
-#         self.bn3 = nn.BatchNorm1d(1024)
-#         self.bn4 = nn.BatchNorm1d(512)
-#         self.bn5 = nn.BatchNorm1d(256)
-
-#         self.k = k
-
-#     def forward(self, x):
-#         batchsize = x.size()[0]
-#         x = F.relu(self.bn1(self.conv1(x)))  # (batchsize, 64, n_pts)
-#         x = F.relu(self.bn2(self.conv2(x)))  # (batchsize, 128, n_pts)
-#         x = F.relu(self.bn3(self.conv3(x)))  # (batchsize, 1024, n_pts)
-#         x = torch.max(x, 2, keepdim=True)[0]  # (batchsize, 1024, 1)
-#         x = x.view(-1, 1024)  # (batchsize, 1024)
-
-#         x = F.relu(self.bn4(self.fc1(x)))  # (batchsize, 512)
-#         x = F.relu(self.bn5(self.fc2(x)))  # (batchsize, 256)
-#         x = self.fc3(x)  # (batchsize, k*k)
-
-#         iden = torch.eye(self.k).flatten().view(1, self.k * self.k).repeat(batchsize, 1).to(x.device)
-#         x = x + iden  # Add identity to the transformation matrix
-#         x = x.view(-1, self.k, self.k)  # (batchsize, k, k)
-#         return x
-
-# # PointNet feature extractor modified to accept settings
-# class PointNetfeat(nn.Module):
-#     def __init__(self, global_feat=True, feature_transform=False, input_dim=6, settings_dim=6):
-#         super(PointNetfeat, self).__init__()
-#         self.stn = STNkd(k=input_dim)  # Spatial transformer network for input_dim dimensions
-#         self.conv1 = torch.nn.Conv1d(input_dim, 64, 1)
-#         self.conv2 = torch.nn.Conv1d(64, 128, 1)
-#         # Adjust input channels of conv3 to account for settings concatenation
-#         self.conv3 = torch.nn.Conv1d(128 + settings_dim, 1024, 1)
-#         self.bn1 = nn.BatchNorm1d(64)
-#         self.bn2 = nn.BatchNorm1d(128)
-#         self.bn3 = nn.BatchNorm1d(1024)
-#         self.global_feat = global_feat
-#         self.feature_transform = feature_transform
-#         if self.feature_transform:
-#             self.fstn = STNkd(k=64)
-
-#         self.settings_dim = settings_dim
-
-#     def forward(self, x, settings):
-#         batchsize = x.size()[0]
-#         n_pts = x.size()[2]
-#         trans = self.stn(x)  # (batchsize, k, k)
-#         x = x.transpose(2, 1)  # (batchsize, n_pts, k)
-#         x = torch.bmm(x, trans)  # Apply the transformation
-#         x = x.transpose(2, 1)  # (batchsize, k, n_pts)
-#         x = F.relu(self.bn1(self.conv1(x)))  # (batchsize, 64, n_pts)
-
-#         if self.feature_transform:
-#             trans_feat = self.fstn(x)  # (batchsize, 64, 64)
-#             x = x.transpose(2, 1)  # (batchsize, n_pts, 64)
-#             x = torch.bmm(x, trans_feat)  # Apply feature transformation
-#             x = x.transpose(2, 1)  # (batchsize, 64, n_pts)
-#         else:
-#             trans_feat = None
-
-#         pointfeat = x  # (batchsize, 64, n_pts)
-#         x = F.relu(self.bn2(self.conv2(x)))  # (batchsize, 128, n_pts)
-
-#         # Expand and concatenate settings with per-point features
-#         settings_expanded = settings.unsqueeze(2).repeat(1, 1, n_pts)  # (batchsize, settings_dim, n_pts)
-#         x = torch.cat([x, settings_expanded], dim=1)  # (batchsize, 128 + settings_dim, n_pts)
-
-#         x = self.bn3(self.conv3(x))  # (batchsize, 1024, n_pts)
-#         x = torch.max(x, 2, keepdim=True)[0]  # (batchsize, 1024, 1)
-#         x = x.view(-1, 1024)  # (batchsize, 1024)
-#         if self.global_feat:
-#             return x, trans, trans_feat
-#         else:
-#             x = x.view(-1, 1024, 1).repeat(1, 1, n_pts)  # (batchsize, 1024, n_pts)
-#             return torch.cat([x, pointfeat], 1), trans, trans_feat  # (batchsize, 1024 + 64, n_pts)
-
-# # PointNetRegression modified to accept settings
-# class PointNetRegression(nn.Module):
-#     def __init__(self, output_dim=6, feature_transform=False, input_dim=6, settings_dim=6):
-#         super(PointNetRegression, self).__init__()
-#         self.output_dim = output_dim
-#         self.feature_transform = feature_transform
-#         self.input_dim = input_dim
-#         self.settings_dim = settings_dim
-#         self.feat = PointNetfeat(global_feat=False, feature_transform=feature_transform, input_dim=input_dim, settings_dim=settings_dim)
-#         # Adjust input channels of conv1 due to concatenation
-#         self.conv1 = torch.nn.Conv1d(1024 + 64, 512, 1)  # (1024 from global, 64 from pointfeat)
-#         self.conv2 = torch.nn.Conv1d(512, 256, 1)
-#         self.conv3 = torch.nn.Conv1d(256, 128, 1)
-#         self.conv4 = torch.nn.Conv1d(128, self.output_dim, 1)
-#         self.bn1 = nn.BatchNorm1d(512)
-#         self.bn2 = nn.BatchNorm1d(256)
-#         self.bn3 = nn.BatchNorm1d(128)
-
-#     def forward(self, x, settings):
-#         batchsize = x.size()[0]
-#         n_pts = x.size()[2]
-#         x, trans, trans_feat = self.feat(x, settings)  # x: (batchsize, 1024 + 64, n_pts)
-#         x = F.relu(self.bn1(self.conv1(x)))  # (batchsize, 512, n_pts)
-#         x = F.relu(self.bn2(self.conv2(x)))  # (batchsize, 256, n_pts)
-#         x = F.relu(self.bn3(self.conv3(x)))  # (batchsize, 128, n_pts)
-#         x = self.conv4(x)  # (batchsize, output_dim, n_pts)
-#         x = x.transpose(2, 1).contiguous()  # (batchsize, n_pts, output_dim)
-#         return x  # Return outputs for regression tasks
-
 # Spatial Transformer Network with parameterized hidden_dim
 class STNkd(nn.Module):
     def __init__(self, k=6, hidden_dim=64):
@@ -331,40 +213,126 @@ class STNkd(nn.Module):
         x = x.view(-1, self.k, self.k)  # (batchsize, k, k)
         return x
 
-# PointNet feature extractor with parameterized hidden_dim
+# # PointNet feature extractor with parameterized hidden_dim
+# class PointNetfeat(nn.Module):
+#     def __init__(self, global_feat=True, feature_transform=False, input_dim=6, settings_dim=6, hidden_dim=64):
+#         super(PointNetfeat, self).__init__()
+#         self.stn = STNkd(k=input_dim, hidden_dim=hidden_dim)  # Spatial transformer network
+#         self.conv1 = torch.nn.Conv1d(input_dim, hidden_dim // 4, 1)
+#         self.conv2 = torch.nn.Conv1d(hidden_dim // 4, hidden_dim // 2, 1)
+#         # Adjust input channels of conv3 to account for settings concatenation
+#         self.conv3 = torch.nn.Conv1d((hidden_dim // 2) + settings_dim, hidden_dim, 1)
+#         self.bn1 = nn.BatchNorm1d(hidden_dim // 4)
+#         self.bn2 = nn.BatchNorm1d(hidden_dim // 2)
+#         self.bn3 = nn.BatchNorm1d(hidden_dim)
+#         self.global_feat = global_feat
+#         self.feature_transform = feature_transform
+#         if self.feature_transform:
+#             self.fstn = STNkd(k=hidden_dim // 2, hidden_dim=hidden_dim)
+            
+#         self.hidden_dim = hidden_dim
+#         self.settings_dim = settings_dim
+
+#     def forward(self, x, settings):
+#         batchsize = x.size()[0]
+#         n_pts = x.size()[2]
+#         trans = self.stn(x)  # (batchsize, k, k)
+#         x = x.transpose(2, 1)  # (batchsize, n_pts, k)
+#         x = torch.bmm(x, trans)  # Apply the transformation
+#         x = x.transpose(2, 1)  # (batchsize, k, n_pts)
+#         x = F.relu(self.bn1(self.conv1(x)))  # (batchsize, hidden_dim // 4, n_pts)
+
+#         if self.feature_transform:
+#             trans_feat = self.fstn(x)  # (batchsize, hidden_dim // 2, hidden_dim // 2)
+#             x = x.transpose(2, 1)  # (batchsize, n_pts, hidden_dim // 4)
+#             x = torch.bmm(x, trans_feat)  # Apply feature transformation
+#             x = x.transpose(2, 1)  # (batchsize, hidden_dim // 4, n_pts)
+#         else:
+#             trans_feat = None
+
+#         pointfeat = x  # (batchsize, hidden_dim // 4, n_pts)
+#         x = F.relu(self.bn2(self.conv2(x)))  # (batchsize, hidden_dim // 2, n_pts)
+
+#         # Expand and concatenate settings with per-point features
+#         settings_expanded = settings.unsqueeze(2).repeat(1, 1, n_pts)  # (batchsize, settings_dim, n_pts)
+#         x = torch.cat([x, settings_expanded], dim=1)  # (batchsize, hidden_dim // 2 + settings_dim, n_pts)
+
+#         x = F.relu(self.bn3(self.conv3(x)))  # (batchsize, hidden_dim, n_pts)
+#         x = torch.max(x, 2, keepdim=True)[0]  # (batchsize, hidden_dim, 1)
+#         x = x.view(-1, self.hidden_dim)  # (batchsize, hidden_dim)
+#         if self.global_feat:
+#             return x, trans, trans_feat
+#         else:
+#             x = x.view(-1, self.hidden_dim, 1).repeat(1, 1, n_pts)  # (batchsize, hidden_dim, n_pts)
+#             return torch.cat([x, pointfeat], 1), trans, trans_feat  # (batchsize, hidden_dim + hidden_dim // 4, n_pts)
+
+# PointNet feature extractor with parameterized hidden_dim and STN_dim
 class PointNetfeat(nn.Module):
-    def __init__(self, global_feat=True, feature_transform=False, input_dim=6, settings_dim=6, hidden_dim=64):
+    def __init__(self, global_feat=True, feature_transform=False, input_dim=6, settings_dim=6, hidden_dim=64, STN_dim=3):
+        """
+        PointNet Feature Extractor.
+
+        Args:
+            global_feat (bool): Whether to return global features.
+            feature_transform (bool): Whether to apply feature transformation.
+            input_dim (int): Number of input dimensions per point.
+            settings_dim (int): Number of settings dimensions.
+            hidden_dim (int): Dimension of hidden layers.
+            STN_dim (int): Number of dimensions to apply STN on (3 or 6).
+        """
         super(PointNetfeat, self).__init__()
-        self.stn = STNkd(k=input_dim, hidden_dim=hidden_dim)  # Spatial transformer network
-        self.conv1 = torch.nn.Conv1d(input_dim, hidden_dim // 4, 1)
-        self.conv2 = torch.nn.Conv1d(hidden_dim // 4, hidden_dim // 2, 1)
+        self.global_feat = global_feat
+        self.feature_transform = feature_transform
+        self.hidden_dim = hidden_dim
+        self.settings_dim = settings_dim
+        self.STN_dim = STN_dim
+
+        # Spatial transformer network applied to the first STN_dim dimensions
+        self.stn = STNkd(k=STN_dim, hidden_dim=hidden_dim)
+
+        # Convolutional layers
+        self.conv1 = nn.Conv1d(input_dim, hidden_dim // 4, 1)
+        self.conv2 = nn.Conv1d(hidden_dim // 4, hidden_dim // 2, 1)
         # Adjust input channels of conv3 to account for settings concatenation
-        self.conv3 = torch.nn.Conv1d((hidden_dim // 2) + settings_dim, hidden_dim, 1)
+        self.conv3 = nn.Conv1d((hidden_dim // 2) + settings_dim, hidden_dim, 1)
+
+        # Batch normalization layers
         self.bn1 = nn.BatchNorm1d(hidden_dim // 4)
         self.bn2 = nn.BatchNorm1d(hidden_dim // 2)
         self.bn3 = nn.BatchNorm1d(hidden_dim)
-        self.global_feat = global_feat
-        self.feature_transform = feature_transform
+
+        # Feature transformer if enabled
         if self.feature_transform:
             self.fstn = STNkd(k=hidden_dim // 2, hidden_dim=hidden_dim)
-            
-        self.hidden_dim = hidden_dim
-        self.settings_dim = settings_dim
 
     def forward(self, x, settings):
-        batchsize = x.size()[0]
-        n_pts = x.size()[2]
-        trans = self.stn(x)  # (batchsize, k, k)
-        x = x.transpose(2, 1)  # (batchsize, n_pts, k)
-        x = torch.bmm(x, trans)  # Apply the transformation
-        x = x.transpose(2, 1)  # (batchsize, k, n_pts)
+        """
+        Forward pass of PointNetfeat.
+
+        Args:
+            x (torch.Tensor): Input tensor of shape (batchsize, input_dim, n_pts).
+            settings (torch.Tensor): Settings tensor of shape (batchsize, settings_dim).
+
+        Returns:
+            tuple: Features, transformation matrix, and feature transformation matrix (if feature_transform=True).
+        """
+        batchsize = x.size(0)
+        n_pts = x.size(2)
+
+        # Apply spatial transformer to the first STN_dim dimensions
+        trans = self.stn(x[:, :self.STN_dim, :])  # (batchsize, STN_dim, STN_dim)
+        x_trans = x[:, :self.STN_dim, :].transpose(2, 1)  # (batchsize, n_pts, STN_dim)
+        x_trans = torch.bmm(x_trans, trans)  # (batchsize, n_pts, STN_dim)
+        x_trans = x_trans.transpose(2, 1)  # (batchsize, STN_dim, n_pts)
+        x = torch.cat([x_trans, x[:, self.STN_dim:, :]], dim=1)  # (batchsize, input_dim, n_pts)
+
         x = F.relu(self.bn1(self.conv1(x)))  # (batchsize, hidden_dim // 4, n_pts)
 
         if self.feature_transform:
             trans_feat = self.fstn(x)  # (batchsize, hidden_dim // 2, hidden_dim // 2)
-            x = x.transpose(2, 1)  # (batchsize, n_pts, hidden_dim // 4)
+            x = x.transpose(2, 1)      # (batchsize, n_pts, hidden_dim // 4)
             x = torch.bmm(x, trans_feat)  # Apply feature transformation
-            x = x.transpose(2, 1)  # (batchsize, hidden_dim // 4, n_pts)
+            x = x.transpose(2, 1)      # (batchsize, hidden_dim // 4, n_pts)
         else:
             trans_feat = None
 
@@ -377,49 +345,125 @@ class PointNetfeat(nn.Module):
 
         x = F.relu(self.bn3(self.conv3(x)))  # (batchsize, hidden_dim, n_pts)
         x = torch.max(x, 2, keepdim=True)[0]  # (batchsize, hidden_dim, 1)
-        x = x.view(-1, self.hidden_dim)  # (batchsize, hidden_dim)
+        x = x.view(-1, self.hidden_dim)      # (batchsize, hidden_dim)
+
         if self.global_feat:
             return x, trans, trans_feat
         else:
             x = x.view(-1, self.hidden_dim, 1).repeat(1, 1, n_pts)  # (batchsize, hidden_dim, n_pts)
             return torch.cat([x, pointfeat], 1), trans, trans_feat  # (batchsize, hidden_dim + hidden_dim // 4, n_pts)
 
-# PointNetRegression with parameterized hidden_dim
+# # PointNetRegression with parameterized hidden_dim
+# class PointNetRegression(nn.Module):
+#     def __init__(self, output_dim=6, feature_transform=False, input_dim=6, settings_dim=6, hidden_dim=64):
+#         super(PointNetRegression, self).__init__()
+#         self.output_dim = output_dim
+#         self.feature_transform = feature_transform
+#         self.input_dim = input_dim
+#         self.settings_dim = settings_dim
+#         self.hidden_dim = hidden_dim
+#         self.feat = PointNetfeat(
+#             global_feat=False,
+#             feature_transform=feature_transform,
+#             input_dim=input_dim,
+#             settings_dim=settings_dim,
+#             hidden_dim=hidden_dim
+#         )
+#         # Adjust input channels of conv1 due to concatenation
+#         self.conv1 = torch.nn.Conv1d(hidden_dim + hidden_dim // 4, hidden_dim, 1)
+#         self.conv2 = torch.nn.Conv1d(hidden_dim, hidden_dim // 2, 1)
+#         self.conv3 = torch.nn.Conv1d(hidden_dim // 2, hidden_dim // 4, 1)
+#         self.conv4 = torch.nn.Conv1d(hidden_dim // 4, self.output_dim, 1)
+#         self.bn1 = nn.BatchNorm1d(hidden_dim)
+#         self.bn2 = nn.BatchNorm1d(hidden_dim // 2)
+#         self.bn3 = nn.BatchNorm1d(hidden_dim // 4)
+
+#     def forward(self, x, settings):
+#         # x: (batchsize, input_dim, n_pts)
+        
+#         batchsize = x.size()[0]
+#         n_pts = x.size()[2]
+        
+#         x = x.permute(0, 2, 1)
+#         x, trans, trans_feat = self.feat(x, settings)  # x: (batchsize, hidden_dim + hidden_dim // 4, n_pts)
+#         x = F.relu(self.bn1(self.conv1(x)))  # (batchsize, hidden_dim, n_pts)
+#         x = F.relu(self.bn2(self.conv2(x)))  # (batchsize, hidden_dim // 2, n_pts)
+#         x = F.relu(self.bn3(self.conv3(x)))  # (batchsize, hidden_dim // 4, n_pts)
+#         x = self.conv4(x)  # (batchsize, output_dim, n_pts)
+#         x = x.transpose(2, 1).contiguous()  # (batchsize, n_pts, output_dim)
+#         return x  # Return outputs for regression tasks
+
+# PointNetRegression with parameterized hidden_dim and STN_dim
 class PointNetRegression(nn.Module):
-    def __init__(self, output_dim=6, feature_transform=False, input_dim=6, settings_dim=6, hidden_dim=64):
+    def __init__(self, output_dim=6, feature_transform=False, input_dim=6, settings_dim=6, hidden_dim=64, STN_dim=3):
+        """
+        PointNet Regression Model.
+
+        Args:
+            output_dim (int): Number of output dimensions per point.
+            feature_transform (bool): Whether to apply feature transformation.
+            input_dim (int): Number of input dimensions per point.
+            settings_dim (int): Number of settings dimensions.
+            hidden_dim (int): Dimension of hidden layers.
+            STN_dim (int): Number of dimensions to apply STN on (3 or 6).
+        """
         super(PointNetRegression, self).__init__()
         self.output_dim = output_dim
         self.feature_transform = feature_transform
         self.input_dim = input_dim
         self.settings_dim = settings_dim
         self.hidden_dim = hidden_dim
+        self.STN_dim = STN_dim
+
+        # Initialize the feature extractor with STN_dim
         self.feat = PointNetfeat(
             global_feat=False,
             feature_transform=feature_transform,
             input_dim=input_dim,
             settings_dim=settings_dim,
-            hidden_dim=hidden_dim
+            hidden_dim=hidden_dim,
+            STN_dim=STN_dim
         )
+
         # Adjust input channels of conv1 due to concatenation
-        self.conv1 = torch.nn.Conv1d(hidden_dim + hidden_dim // 4, hidden_dim, 1)
-        self.conv2 = torch.nn.Conv1d(hidden_dim, hidden_dim // 2, 1)
-        self.conv3 = torch.nn.Conv1d(hidden_dim // 2, hidden_dim // 4, 1)
-        self.conv4 = torch.nn.Conv1d(hidden_dim // 4, self.output_dim, 1)
+        # The PointNetfeat returns (hidden_dim, n_pts)
+        self.conv1 = nn.Conv1d(hidden_dim + hidden_dim // 4, hidden_dim, 1)
+        self.conv2 = nn.Conv1d(hidden_dim, hidden_dim // 2, 1)
+        self.conv3 = nn.Conv1d(hidden_dim // 2, hidden_dim // 4, 1)
+        self.conv4 = nn.Conv1d(hidden_dim // 4, self.output_dim, 1)
+        
+        # Batch normalization layers
         self.bn1 = nn.BatchNorm1d(hidden_dim)
         self.bn2 = nn.BatchNorm1d(hidden_dim // 2)
         self.bn3 = nn.BatchNorm1d(hidden_dim // 4)
 
     def forward(self, x, settings):
+        """
+        Forward pass of PointNetRegression.
+
+        Args:
+            x (torch.Tensor): Input tensor of shape (batchsize, input_dim, n_pts).
+            settings (torch.Tensor): Settings tensor of shape (batchsize, settings_dim).
+
+        Returns:
+            torch.Tensor: Output tensor of shape (batchsize, n_pts, output_dim).
+        """
+        # x: (batchsize, input_dim, n_pts)
         batchsize = x.size()[0]
         n_pts = x.size()[2]
-        
-        x = x.permute(0, 2, 1)
-        x, trans, trans_feat = self.feat(x, settings)  # x: (batchsize, hidden_dim + hidden_dim // 4, n_pts)
+
+        # Permute to (batchsize, n_pts, input_dim) for PointNetfeat
+        x = x.permute(0, 2, 1)  # (batchsize, n_pts, input_dim)
+        x, trans, trans_feat = self.feat(x, settings)  # x: (batchsize, hidden_dim, n_pts)
+
+        # Per-point MLP layers
         x = F.relu(self.bn1(self.conv1(x)))  # (batchsize, hidden_dim, n_pts)
         x = F.relu(self.bn2(self.conv2(x)))  # (batchsize, hidden_dim // 2, n_pts)
         x = F.relu(self.bn3(self.conv3(x)))  # (batchsize, hidden_dim // 4, n_pts)
-        x = self.conv4(x)  # (batchsize, output_dim, n_pts)
-        x = x.transpose(2, 1).contiguous()  # (batchsize, n_pts, output_dim)
+        x = self.conv4(x)                     # (batchsize, output_dim, n_pts)
+
+        # Permute back to (batchsize, n_pts, output_dim)
+        x = x.transpose(2, 1).contiguous()    # (batchsize, n_pts, output_dim)
         return x  # Return outputs for regression tasks
     
 # Regularization loss remains the same
@@ -514,3 +558,639 @@ class PointNet3(nn.Module):
         x = x.transpose(2, 1).contiguous()  # (batch_size, n_pts, num_output_channels)
         return x  # Return outputs for regression tasks
     
+# ==============================================================================================================
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+# =============================
+# Variation 1: Settings at Start
+# =============================
+
+# Spatial Transformer Network for SettingsAtStart
+class STNkd_SettingsAtStart(nn.Module):
+    def __init__(self, k=3, hidden_dim=64):
+        super(STNkd_SettingsAtStart, self).__init__()
+        self.conv1 = nn.Conv1d(k, hidden_dim // 4, 1)
+        self.conv2 = nn.Conv1d(hidden_dim // 4, hidden_dim // 2, 1)
+        self.conv3 = nn.Conv1d(hidden_dim // 2, hidden_dim, 1)
+        self.fc1 = nn.Linear(hidden_dim, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, hidden_dim // 2)
+        self.fc3 = nn.Linear(hidden_dim // 2, k * k)
+        self.relu = nn.ReLU()
+
+        self.bn1 = nn.BatchNorm1d(hidden_dim // 4)
+        self.bn2 = nn.BatchNorm1d(hidden_dim // 2)
+        self.bn3 = nn.BatchNorm1d(hidden_dim)
+        self.bn4 = nn.BatchNorm1d(hidden_dim)
+        self.bn5 = nn.BatchNorm1d(hidden_dim // 2)
+
+        self.k = k
+        self.hidden_dim = hidden_dim
+
+    def forward(self, x):
+        batchsize = x.size(0)
+        # print("STNkd_SettingsAtStart Shape:", x.shape)
+        
+        x = F.relu(self.bn1(self.conv1(x)))  # (batchsize, hidden_dim // 4, n_pts)
+        
+        # print("STNkd_SettingsAtStart Shape:", x.shape)
+        
+        x = F.relu(self.bn2(self.conv2(x)))  # (batchsize, hidden_dim // 2, n_pts)
+        x = F.relu(self.bn3(self.conv3(x)))  # (batchsize, hidden_dim, n_pts)
+        x = torch.max(x, 2, keepdim=True)[0]  # (batchsize, hidden_dim, 1)
+        x = x.view(-1, self.hidden_dim)      # (batchsize, hidden_dim)
+
+        x = F.relu(self.bn4(self.fc1(x)))    # (batchsize, hidden_dim)
+        x = F.relu(self.bn5(self.fc2(x)))    # (batchsize, hidden_dim // 2)
+        x = self.fc3(x)                       # (batchsize, k*k)
+
+        iden = torch.eye(self.k, device=x.device).flatten().unsqueeze(0).repeat(batchsize, 1)
+        x = x + iden                          # Add identity to the transformation matrix
+        x = x.view(-1, self.k, self.k)       # (batchsize, k, k)
+        
+        # print("STNkd_SettingsAtStart Shape:", x.shape)
+        return x
+
+# PointNet Feature Extractor with Settings Concatenated at Start
+class PointNetfeat_SettingsAtStart(nn.Module):
+    def __init__(self, global_feat=True, feature_transform=False, input_dim=6, settings_dim=6, hidden_dim=64):
+        super(PointNetfeat_SettingsAtStart, self).__init__()
+        self.global_feat = global_feat
+        self.feature_transform = feature_transform
+        self.hidden_dim = hidden_dim
+        self.settings_dim = settings_dim
+
+        # Spatial transformer for first three dimensions
+        self.stn = STNkd_SettingsAtStart(k=3, hidden_dim=hidden_dim)  # Only first three dimensions
+
+        # Convolutional layers
+        self.conv1 = nn.Conv1d(input_dim + settings_dim, hidden_dim // 4, 1)
+        self.conv2 = nn.Conv1d(hidden_dim // 4, hidden_dim // 2, 1)
+        self.conv3 = nn.Conv1d(hidden_dim // 2, hidden_dim, 1)
+
+        # Batch normalization layers
+        self.bn1 = nn.BatchNorm1d(hidden_dim // 4)
+        self.bn2 = nn.BatchNorm1d(hidden_dim // 2)
+        self.bn3 = nn.BatchNorm1d(hidden_dim)
+
+        # Feature transformer if enabled
+        if self.feature_transform:
+            self.fstn = STNkd_SettingsAtStart(k=hidden_dim // 2, hidden_dim=hidden_dim)
+
+    def forward(self, x, settings):
+        """
+        x: (batchsize, input_dim, n_pts)
+        settings: (batchsize, settings_dim)
+        """
+        batchsize, input_dim, n_pts = x.size()
+        
+        # print("Input Shape line 600:", x.shape)
+
+        # Concatenate settings to each node feature
+        settings_expanded = settings.unsqueeze(2).repeat(1, 1, n_pts)  # (batchsize, settings_dim, n_pts)
+        x = torch.cat([x, settings_expanded], dim=1)  # (batchsize, input_dim + settings_dim, n_pts)
+        
+        # print("Input Shape:", x.shape)
+
+        # Split spatial and other features
+        spatial_features = x[:, :3, :]  # (batchsize, 3, n_pts)
+        other_features = x[:, 3:, :]    # (batchsize, input_dim + settings_dim - 3, n_pts)
+
+        # Apply spatial transformer on spatial features
+        trans = self.stn(spatial_features)  # (batchsize, 3, 3)
+        spatial_features = spatial_features.transpose(2, 1)  # (batchsize, n_pts, 3)
+        spatial_features = torch.bmm(spatial_features, trans)  # (batchsize, n_pts, 3)
+        spatial_features = spatial_features.transpose(2, 1)  # (batchsize, 3, n_pts)
+
+        # print("Spatial Features Shape:", spatial_features.shape)
+        
+        # print("Other Features Shape:", other_features.shape)
+        
+        # Concatenate transformed spatial features with other features
+        x = torch.cat([spatial_features, other_features], dim=1)  # (batchsize, input_dim + settings_dim, n_pts)
+        
+        # print("Concatenated Features Shape before first convolution:", x.shape)
+
+        # First convolution
+        x = F.relu(self.bn1(self.conv1(x)))  # (batchsize, hidden_dim // 4, n_pts)
+        
+        # print("Concatenated Features Shape after first convolution:", x.shape)
+
+        if self.feature_transform:
+            trans_feat = self.fstn(x)  # (batchsize, hidden_dim // 2, hidden_dim // 2)
+            x = x.transpose(2, 1)      # (batchsize, n_pts, hidden_dim // 4)
+            x = torch.bmm(x, trans_feat)  # Apply feature transformation
+            x = x.transpose(2, 1)      # (batchsize, hidden_dim // 4, n_pts)
+        else:
+            trans_feat = None
+
+        # print("x Shape before assign pointfeat:", x.shape)
+        
+        pointfeat = x  # (batchsize, hidden_dim // 4, n_pts)
+        x = F.relu(self.bn2(self.conv2(x)))  # (batchsize, hidden_dim // 2, n_pts)
+
+        # Third convolution
+        x = F.relu(self.bn3(self.conv3(x)))  # (batchsize, hidden_dim, n_pts)
+
+        x = torch.max(x, 2, keepdim=True)[0]  # (batchsize, hidden_dim, 1)
+        x = x.view(-1, self.hidden_dim)      # (batchsize, hidden_dim)
+
+        # print("x shape before return:", x.shape)
+        
+        if self.global_feat:
+            return x, trans, trans_feat
+        else:
+            x = x.view(-1, self.hidden_dim, 1).repeat(1, 1, n_pts)  # (batchsize, hidden_dim, n_pts)
+            return torch.cat([x, pointfeat], 1), trans, trans_feat  # (batchsize, hidden_dim + hidden_dim // 4, n_pts)
+
+# PointNet Regression Model with Settings Concatenated at Start
+class PointNetRegression_SettingsAtStart(nn.Module):
+    def __init__(self, output_dim=6, feature_transform=False, input_dim=6, settings_dim=6, hidden_dim=64):
+        super(PointNetRegression_SettingsAtStart, self).__init__()
+        self.output_dim = output_dim
+        self.feature_transform = feature_transform
+        self.input_dim = input_dim
+        self.settings_dim = settings_dim
+        self.hidden_dim = hidden_dim
+
+        self.feat = PointNetfeat_SettingsAtStart(
+            global_feat=False,
+            feature_transform=feature_transform,
+            input_dim=input_dim,
+            settings_dim=settings_dim,
+            hidden_dim=hidden_dim
+        )
+
+        # Additional convolutional layers for regression
+        self.conv1 = nn.Conv1d(hidden_dim + hidden_dim // 4, hidden_dim // 2, 1)
+        self.conv2 = nn.Conv1d(hidden_dim // 2, hidden_dim // 4, 1)
+        self.conv3 = nn.Conv1d(hidden_dim // 4, self.output_dim, 1)
+
+        # Batch normalization layers
+        self.bn1 = nn.BatchNorm1d(hidden_dim // 2)
+        self.bn2 = nn.BatchNorm1d(hidden_dim // 4)
+
+    def forward(self, x, settings):
+        """
+        x: (batchsize, input_dim, n_pts)
+        settings: (batchsize, settings_dim)
+        """
+        # x: (batchsize, n_pts, input_dim)
+        
+        x = x.permute(0, 2, 1)
+        
+        batchsize, input_dim, n_pts = x.size()
+
+        
+        x, trans, trans_feat = self.feat(x, settings)  # x: (batchsize, hidden_dim, n_pts)
+        # x = x.permute(0, 2, 1)  # (batchsize, n_pts, input_dim)
+        
+        # print("Shape before conv1:", x.shape)
+
+        x = F.relu(self.bn1(self.conv1(x)))  # (batchsize, hidden_dim // 2, n_pts)
+        x = F.relu(self.bn2(self.conv2(x)))  # (batchsize, hidden_dim // 4, n_pts)
+        x = self.conv3(x)                     # (batchsize, output_dim, n_pts)
+        
+        # print("Shape before output:", x.shape)
+
+        x = x.transpose(2, 1).contiguous()    # (batchsize, n_pts, output_dim)
+        
+        # print("Output Shape:", x.shape)
+        return x  # Return outputs for regression tasks
+
+# Example Usage for SettingsAtStart
+if __name__ == "__main__":
+    print("===== Testing PointNetRegression_SettingsAtStart =====")
+    batch_size = 32
+    n_pts = 1024
+    input_dim = 6
+    settings_dim = 6
+    output_dim = 6
+
+    # Sample input data
+    x = torch.randn(batch_size, n_pts, input_dim)        # (batchsize, n_pts, input_dim)    
+    # x = torch.randn(batch_size, input_dim, n_pts)        # (batchsize, input_dim, n_pts)
+    settings = torch.randn(batch_size, settings_dim)      # (batchsize, settings_dim)
+
+    # Instantiate the model
+    model_start = PointNetRegression_SettingsAtStart(
+        output_dim=output_dim,
+        feature_transform=False,
+        input_dim=input_dim,
+        settings_dim=settings_dim,
+        hidden_dim=64
+    )
+
+    # Forward pass
+    output_start = model_start(x, settings)  # (batchsize, n_pts, output_dim)
+    print("Output Shape (Settings at Start):", output_start.shape)
+
+# =============================
+# Variation 2: Settings at Global
+# =============================
+
+# Spatial Transformer Network for SettingsAtGlobal
+class STNkd_SettingsAtGlobal(nn.Module):
+    def __init__(self, k=3, hidden_dim=64):
+        super(STNkd_SettingsAtGlobal, self).__init__()
+        self.conv1 = nn.Conv1d(k, hidden_dim // 4, 1)
+        self.conv2 = nn.Conv1d(hidden_dim // 4, hidden_dim // 2, 1)
+        self.conv3 = nn.Conv1d(hidden_dim // 2, hidden_dim, 1)
+        self.fc1 = nn.Linear(hidden_dim, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, hidden_dim // 2)
+        self.fc3 = nn.Linear(hidden_dim // 2, k * k)
+        self.relu = nn.ReLU()
+
+        self.bn1 = nn.BatchNorm1d(hidden_dim // 4)
+        self.bn2 = nn.BatchNorm1d(hidden_dim // 2)
+        self.bn3 = nn.BatchNorm1d(hidden_dim)
+        self.bn4 = nn.BatchNorm1d(hidden_dim)
+        self.bn5 = nn.BatchNorm1d(hidden_dim // 2)
+
+        self.k = k
+        self.hidden_dim = hidden_dim
+
+    def forward(self, x):
+        batchsize = x.size(0)
+        
+        # print("STNkd_SettingsAtGlobal Shape line 773:", x.shape)
+        x = F.relu(self.bn1(self.conv1(x)))  # (batchsize, hidden_dim // 4, n_pts)
+        x = F.relu(self.bn2(self.conv2(x)))  # (batchsize, hidden_dim // 2, n_pts)
+        x = F.relu(self.bn3(self.conv3(x)))  # (batchsize, hidden_dim, n_pts)
+        x = torch.max(x, 2, keepdim=True)[0]  # (batchsize, hidden_dim, 1)
+        x = x.view(-1, self.hidden_dim)      # (batchsize, hidden_dim)
+
+        x = F.relu(self.bn4(self.fc1(x)))    # (batchsize, hidden_dim)
+        x = F.relu(self.bn5(self.fc2(x)))    # (batchsize, hidden_dim // 2)
+        x = self.fc3(x)                       # (batchsize, k*k)
+
+        iden = torch.eye(self.k, device=x.device).flatten().unsqueeze(0).repeat(batchsize, 1)
+        x = x + iden                          # Add identity to the transformation matrix
+        x = x.view(-1, self.k, self.k)       # (batchsize, k, k)
+        return x
+
+# PointNet Feature Extractor with Settings Concatenated at Global Features
+class PointNetfeat_SettingsAtGlobal(nn.Module):
+    def __init__(self, global_feat=True, feature_transform=False, input_dim=6, settings_dim=6, hidden_dim=64):
+        super(PointNetfeat_SettingsAtGlobal, self).__init__()
+        self.global_feat = global_feat
+        self.feature_transform = feature_transform
+        self.hidden_dim = hidden_dim
+        self.settings_dim = settings_dim
+
+        # Spatial transformer for first three dimensions
+        self.stn = STNkd_SettingsAtGlobal(k=3, hidden_dim=hidden_dim)  # Only first three dimensions
+
+        # Convolutional layers
+        self.conv1 = nn.Conv1d(input_dim, hidden_dim // 4, 1)
+        self.conv2 = nn.Conv1d(hidden_dim // 4, hidden_dim // 2, 1)
+        self.conv3 = nn.Conv1d(hidden_dim + settings_dim, hidden_dim, 1)
+
+        # Batch normalization layers
+        self.bn1 = nn.BatchNorm1d(hidden_dim // 4)
+        self.bn2 = nn.BatchNorm1d(hidden_dim // 2)
+        self.bn3 = nn.BatchNorm1d(hidden_dim)
+
+        # Feature transformer if enabled
+        if self.feature_transform:
+            self.fstn = STNkd_SettingsAtGlobal(k=hidden_dim // 2, hidden_dim=hidden_dim)
+
+    def forward(self, x, settings):
+        """
+        x: (batchsize, input_dim, n_pts)
+        settings: (batchsize, settings_dim)
+        """
+        batchsize, input_dim, n_pts = x.size()
+
+        # Split spatial and other features
+        spatial_features = x[:, :3, :]  # (batchsize, 3, n_pts)
+        other_features = x[:, 3:, :]    # (batchsize, input_dim - 3, n_pts)
+
+        # Apply spatial transformer on spatial features
+        trans = self.stn(spatial_features)  # (batchsize, 3, 3)
+        spatial_features = spatial_features.transpose(2, 1)  # (batchsize, n_pts, 3)
+        spatial_features = torch.bmm(spatial_features, trans)  # (batchsize, n_pts, 3)
+        spatial_features = spatial_features.transpose(2, 1)  # (batchsize, 3, n_pts)
+
+        # print("Spatial Features Shape:", spatial_features.shape)
+        # print("Other Features Shape:", other_features.shape)
+        
+        # Concatenate transformed spatial features with other features
+        x = torch.cat([spatial_features, other_features], dim=1)  # (batchsize, input_dim, n_pts)
+
+        # First convolution
+        x = F.relu(self.bn1(self.conv1(x)))  # (batchsize, hidden_dim // 4, n_pts)
+        
+        # print("x Shape before assign pointfeat:", x.shape)
+
+        if self.feature_transform:
+            trans_feat = self.fstn(x)  # (batchsize, hidden_dim // 2, hidden_dim // 2)
+            x = x.transpose(2, 1)      # (batchsize, n_pts, hidden_dim // 4)
+            x = torch.bmm(x, trans_feat)  # Apply feature transformation
+            x = x.transpose(2, 1)      # (batchsize, hidden_dim // 4, n_pts)
+        else:
+            trans_feat = None
+
+        pointfeat = x  # (batchsize, hidden_dim // 4, n_pts)
+        x = F.relu(self.bn2(self.conv2(x)))  # (batchsize, hidden_dim // 2, n_pts)
+        
+        # print("x Shape before global features and settings:", x.shape)
+
+        # Global feature
+        global_feature = torch.max(x, 2, keepdim=True)[0]  # (batchsize, hidden_dim // 2, 1)
+        settings = settings.unsqueeze(2)  # (batchsize, settings_dim, 1)
+        global_feature = torch.cat([global_feature, settings], dim=1)  # (batchsize, hidden_dim // 2 + settings_dim, 1)
+        global_feature = global_feature.repeat(1, 1, n_pts)  # (batchsize, hidden_dim // 2 + settings_dim, n_pts)
+        
+        # print("Global Features Shape:", global_feature.shape)
+
+        # Concatenate with point features
+        x = torch.cat([x, global_feature], dim=1)  # (batchsize, hidden_dim // 2 + settings_dim, n_pts)
+
+        # Third convolution
+        x = F.relu(self.bn3(self.conv3(x)))  # (batchsize, hidden_dim, n_pts)
+
+        x = torch.max(x, 2, keepdim=True)[0]  # (batchsize, hidden_dim, 1)
+        x = x.view(-1, self.hidden_dim)      # (batchsize, hidden_dim)
+
+        if self.global_feat:
+            return x, trans, trans_feat
+        else:
+            x = x.view(-1, self.hidden_dim, 1).repeat(1, 1, n_pts)  # (batchsize, hidden_dim, n_pts)
+            return torch.cat([x, pointfeat], 1), trans, trans_feat  # (batchsize, hidden_dim + hidden_dim // 4, n_pts)
+
+# PointNet Regression Model with Settings Concatenated at Global Features
+class PointNetRegression_SettingsAtGlobal(nn.Module):
+    def __init__(self, output_dim=6, feature_transform=False, input_dim=6, settings_dim=6, hidden_dim=64):
+        super(PointNetRegression_SettingsAtGlobal, self).__init__()
+        self.output_dim = output_dim
+        self.feature_transform = feature_transform
+        self.input_dim = input_dim
+        self.settings_dim = settings_dim
+        self.hidden_dim = hidden_dim
+
+        self.feat = PointNetfeat_SettingsAtGlobal(
+            global_feat=False,
+            feature_transform=feature_transform,
+            input_dim=input_dim,
+            settings_dim=settings_dim,
+            hidden_dim=hidden_dim
+        )
+
+        # Additional convolutional layers for regression
+        self.conv1 = nn.Conv1d(hidden_dim + hidden_dim // 4, hidden_dim // 2, 1)
+        self.conv2 = nn.Conv1d(hidden_dim // 2, hidden_dim // 4, 1)
+        self.conv3 = nn.Conv1d(hidden_dim // 4, self.output_dim, 1)
+
+        # Batch normalization layers
+        self.bn1 = nn.BatchNorm1d(hidden_dim // 2)
+        self.bn2 = nn.BatchNorm1d(hidden_dim // 4)
+
+    def forward(self, x, settings):
+        """
+        x: (batchsize, input_dim, n_pts)
+        settings: (batchsize, settings_dim)
+        """
+        
+        # x: (batchsize, n_pts, input_dim)
+        
+        x = x.permute(0, 2, 1)
+        batchsize, input_dim, n_pts = x.size()
+
+        # x = x.permute(0, 2, 1)  # (batchsize, n_pts, input_dim)
+        x, trans, trans_feat = self.feat(x, settings)  # x: (batchsize, hidden_dim, n_pts)
+
+        x = F.relu(self.bn1(self.conv1(x)))  # (batchsize, hidden_dim // 2, n_pts)
+        x = F.relu(self.bn2(self.conv2(x)))  # (batchsize, hidden_dim // 4, n_pts)
+        x = self.conv3(x)                     # (batchsize, output_dim, n_pts)
+
+        x = x.transpose(2, 1).contiguous()    # (batchsize, n_pts, output_dim)
+        return x  # Return outputs for regression tasks
+
+# Example Usage for SettingsAtGlobal
+if __name__ == "__main__":
+    print("===== Testing PointNetRegression_SettingsAtGlobal =====")
+    batch_size = 32
+    n_pts = 1024
+    input_dim = 6
+    settings_dim = 6
+    output_dim = 6
+
+    # Sample input data
+    x = torch.randn(batch_size, n_pts, input_dim)        # (batchsize, n_pts, input_dim)    
+    # x = torch.randn(batch_size, input_dim, n_pts)        # (batchsize, input_dim, n_pts)
+    settings = torch.randn(batch_size, settings_dim)      # (batchsize, settings_dim)
+
+    # Instantiate the model
+    model_global = PointNetRegression_SettingsAtGlobal(
+        output_dim=output_dim,
+        feature_transform=False,
+        input_dim=input_dim,
+        settings_dim=settings_dim,
+        hidden_dim=64
+    )
+
+    # Forward pass
+    output_global = model_global(x, settings)  # (batchsize, n_pts, output_dim)
+    print("Output Shape (Settings at Global):", output_global.shape)
+
+# =============================
+# Variation 3: Settings at Current
+# =============================
+
+# Spatial Transformer Network for SettingsAtMiddle
+class STNkd_SettingsAtMiddle(nn.Module):
+    def __init__(self, k=3, hidden_dim=64):
+        super(STNkd_SettingsAtMiddle, self).__init__()
+        self.conv1 = nn.Conv1d(k, hidden_dim // 4, 1)
+        self.conv2 = nn.Conv1d(hidden_dim // 4, hidden_dim // 2, 1)
+        self.conv3 = nn.Conv1d(hidden_dim // 2, hidden_dim, 1)
+        self.fc1 = nn.Linear(hidden_dim, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, hidden_dim // 2)
+        self.fc3 = nn.Linear(hidden_dim // 2, k * k)
+        self.relu = nn.ReLU()
+
+        self.bn1 = nn.BatchNorm1d(hidden_dim // 4)
+        self.bn2 = nn.BatchNorm1d(hidden_dim // 2)
+        self.bn3 = nn.BatchNorm1d(hidden_dim)        
+        self.bn4 = nn.BatchNorm1d(hidden_dim)
+        self.bn5 = nn.BatchNorm1d(hidden_dim // 2)
+
+        self.k = k
+        self.hidden_dim = hidden_dim
+
+    def forward(self, x):
+        batchsize = x.size(0) # (batchsize, k, n_pts)
+        # print("x Shape before conv1:", x.shape)
+        
+        x = F.relu(self.bn1(self.conv1(x)))  # (batchsize, hidden_dim // 4, n_pts)
+        x = F.relu(self.bn2(self.conv2(x)))  # (batchsize, hidden_dim // 2, n_pts)
+        x = F.relu(self.bn3(self.conv3(x)))  # (batchsize, hidden_dim, n_pts)
+        
+        # print("x Shape before max:", x.shape)
+        x = torch.max(x, 2, keepdim=True)[0]  # (batchsize, hidden_dim, 1)
+        x = x.view(-1, self.hidden_dim)      # (batchsize, hidden_dim)
+        
+        # print("x Shape before fc1:", x.shape)
+        x = F.relu(self.bn4(self.fc1(x)))    # (batchsize, hidden_dim)
+        x = F.relu(self.bn5(self.fc2(x)))    # (batchsize, hidden_dim // 2)
+        x = self.fc3(x)                       # (batchsize, k*k)
+
+        iden = torch.eye(self.k, device=x.device).flatten().unsqueeze(0).repeat(batchsize, 1)
+        x = x + iden                          # Add identity to the transformation matrix
+        x = x.view(-1, self.k, self.k)       # (batchsize, k, k)
+        return x
+
+# PointNet Feature Extractor with Settings Concatenated at Current Position
+class PointNetfeat_SettingsAtMiddle(nn.Module):
+    def __init__(self, global_feat=True, feature_transform=False, input_dim=6, settings_dim=6, hidden_dim=64):
+        super(PointNetfeat_SettingsAtMiddle, self).__init__()
+        self.global_feat = global_feat
+        self.feature_transform = feature_transform
+        self.hidden_dim = hidden_dim
+        self.settings_dim = settings_dim
+
+        # Spatial transformer for first three dimensions
+        self.stn = STNkd_SettingsAtMiddle(k=3, hidden_dim=hidden_dim)  # Only first three dimensions
+
+        # Convolutional layers
+        self.conv1 = nn.Conv1d(input_dim, hidden_dim // 4, 1)
+        self.conv2 = nn.Conv1d(hidden_dim // 4, hidden_dim // 2, 1)
+        self.conv3 = nn.Conv1d(hidden_dim // 2 + settings_dim, hidden_dim, 1)
+
+        # Batch normalization layers
+        self.bn1 = nn.BatchNorm1d(hidden_dim // 4)
+        self.bn2 = nn.BatchNorm1d(hidden_dim // 2)
+        self.bn3 = nn.BatchNorm1d(hidden_dim)
+
+        # Feature transformer if enabled
+        if self.feature_transform:
+            self.fstn = STNkd_SettingsAtMiddle(k=hidden_dim // 2, hidden_dim=hidden_dim)
+
+    def forward(self, x, settings):
+        """
+        x: (batchsize, input_dim, n_pts)
+        settings: (batchsize, settings_dim)
+        """
+        batchsize, input_dim, n_pts = x.size()
+
+        # Split spatial and other features
+        spatial_features = x[:, :3, :]  # (batchsize, 3, n_pts)
+        other_features = x[:, 3:, :]    # (batchsize, input_dim - 3, n_pts)
+
+        # Apply spatial transformer on spatial features
+        trans = self.stn(spatial_features)  # (batchsize, 3, 3)
+        spatial_features = spatial_features.transpose(2, 1)  # (batchsize, n_pts, 3)
+        spatial_features = torch.bmm(spatial_features, trans)  # (batchsize, n_pts, 3)
+        spatial_features = spatial_features.transpose(2, 1)  # (batchsize, 3, n_pts)
+
+        # Concatenate transformed spatial features with other features
+        x = torch.cat([spatial_features, other_features], dim=1)  # (batchsize, input_dim, n_pts)
+
+        # First convolution
+        x = F.relu(self.bn1(self.conv1(x)))  # (batchsize, hidden_dim // 4, n_pts)
+
+        if self.feature_transform:
+            trans_feat = self.fstn(x)  # (batchsize, hidden_dim // 2, hidden_dim // 2)
+            x = x.transpose(2, 1)      # (batchsize, n_pts, hidden_dim // 4)
+            x = torch.bmm(x, trans_feat)  # Apply feature transformation
+            x = x.transpose(2, 1)      # (batchsize, hidden_dim // 4, n_pts)
+        else:
+            trans_feat = None
+
+        pointfeat = x  # (batchsize, hidden_dim // 4, n_pts)
+        x = F.relu(self.bn2(self.conv2(x)))  # (batchsize, hidden_dim // 2, n_pts)
+
+        # Concatenate settings with per-point features
+        settings_expanded = settings.unsqueeze(2).repeat(1, 1, n_pts)  # (batchsize, settings_dim, n_pts)
+        x = torch.cat([x, settings_expanded], dim=1)  # (batchsize, hidden_dim // 2 + settings_dim, n_pts)
+
+        # Third convolution
+        x = F.relu(self.bn3(self.conv3(x)))  # (batchsize, hidden_dim, n_pts)
+
+        x = torch.max(x, 2, keepdim=True)[0]  # (batchsize, hidden_dim, 1)
+        x = x.view(-1, self.hidden_dim)      # (batchsize, hidden_dim)
+
+        if self.global_feat:
+            return x, trans, trans_feat
+        else:
+            x = x.view(-1, self.hidden_dim, 1).repeat(1, 1, n_pts)  # (batchsize, hidden_dim, n_pts)
+            return torch.cat([x, pointfeat], 1), trans, trans_feat  # (batchsize, hidden_dim + hidden_dim // 4, n_pts)
+
+# PointNet Regression Model with Settings Concatenated at Current Position
+class PointNetRegression_SettingsAtMiddle(nn.Module):
+    def __init__(self, output_dim=6, feature_transform=False, input_dim=6, settings_dim=6, hidden_dim=64):
+        super(PointNetRegression_SettingsAtMiddle, self).__init__()
+        self.output_dim = output_dim
+        self.feature_transform = feature_transform
+        self.input_dim = input_dim
+        self.settings_dim = settings_dim
+        self.hidden_dim = hidden_dim
+
+        self.feat = PointNetfeat_SettingsAtMiddle(
+            global_feat=False,
+            feature_transform=feature_transform,
+            input_dim=input_dim,
+            settings_dim=settings_dim,
+            hidden_dim=hidden_dim
+        )
+
+        # Additional convolutional layers for regression
+        self.conv1 = nn.Conv1d(hidden_dim + hidden_dim // 4, hidden_dim // 2, 1)
+        self.conv2 = nn.Conv1d(hidden_dim // 2, hidden_dim // 4, 1)
+        self.conv3 = nn.Conv1d(hidden_dim // 4, self.output_dim, 1)
+
+        # Batch normalization layers
+        self.bn1 = nn.BatchNorm1d(hidden_dim // 2)
+        self.bn2 = nn.BatchNorm1d(hidden_dim // 4)
+
+    def forward(self, x, settings):
+        """
+        x: (batchsize, input_dim, n_pts)
+        settings: (batchsize, settings_dim)
+        """
+        # x: (batchsize, n_pts, input_dim)
+        
+        x = x.permute(0, 2, 1)
+        batchsize, input_dim, n_pts = x.size()
+        
+        # print("x Shape before feat:", x.shape)
+
+        # x = x.permute(0, 2, 1)  # (batchsize, n_pts, input_dim)
+        x, trans, trans_feat = self.feat(x, settings)  # x: (batchsize, hidden_dim, n_pts)
+
+        x = F.relu(self.bn1(self.conv1(x)))  # (batchsize, hidden_dim // 2, n_pts)
+        x = F.relu(self.bn2(self.conv2(x)))  # (batchsize, hidden_dim // 4, n_pts)
+        x = self.conv3(x)                     # (batchsize, output_dim, n_pts)
+
+        x = x.transpose(2, 1).contiguous()    # (batchsize, n_pts, output_dim)
+        return x  # Return outputs for regression tasks
+
+# Example Usage for SettingsAtMiddle
+if __name__ == "__main__":
+    print("===== Testing PointNetRegression_SettingsAtMiddle =====")
+    batch_size = 32
+    n_pts = 1024
+    input_dim = 6
+    settings_dim = 6
+    output_dim = 6
+
+    # Sample input data
+    x = torch.randn(batch_size, n_pts, input_dim)        # (batchsize, n_pts, input_dim)    
+    # x = torch.randn(batch_size, input_dim, n_pts)        # (batchsize, input_dim, n_pts)
+    settings = torch.randn(batch_size, settings_dim)      # (batchsize, settings_dim)
+
+    # Instantiate the model
+    model_current = PointNetRegression_SettingsAtMiddle(
+        output_dim=output_dim,
+        feature_transform=False,
+        input_dim=input_dim,
+        settings_dim=settings_dim,
+        hidden_dim=64
+    )
+
+    # Forward pass
+    output_current = model_current(x, settings)  # (batchsize, n_pts, output_dim)
+    print("Output Shape (Settings at Current):", output_current.shape)

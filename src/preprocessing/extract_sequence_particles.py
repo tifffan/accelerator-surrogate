@@ -154,9 +154,9 @@ def extract_and_save_particle_data(h5_file_path, output_dir='data/particles', sa
             settings['distgen:total_charge'] = I['distgen:total_charge']
             # Set total charge to 1e-9 if it's None
             if settings['distgen:total_charge'] is None:
-                settings['distgen:total_charge'] = 1e-9
+                settings['distgen:total_charge'] = args.total_charge
         except KeyError:
-            settings['distgen:total_charge'] = 1e-9
+            settings['distgen:total_charge'] = args.total_charge
 
         # Convert settings to tensors where applicable
         settings_tensor = {}
@@ -182,8 +182,9 @@ def extract_and_save_particle_data(h5_file_path, output_dir='data/particles', sa
 # Usage example
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Extract and save particle data and settings from HDF5 files.")
-    parser.add_argument('--archive_dir', type=str, default='/sdf/data/ad/ard/u/tiffan/Archive_4', help="Directory containing the HDF5 files.")
-    parser.add_argument('--output_dir', type=str, default='/sdf/data/ad/ard/u/tiffan/data/time_series_particle_data_archive_4', help="Directory to save the output tensors.")
+    parser.add_argument('--archive_dir', type=str, default='/sdf/data/ad/ard/u/tiffan/Archive_5', help="Directory containing the HDF5 files.")
+    parser.add_argument('--output_dir', type=str, default='/sdf/data/ad/ard/u/tiffan/data/time_series_particle_data_archive_5', help="Directory to save the output tensors.")
+    parser.add_argument('--total_charge', type=float, default=5e-10, help="disten:total_charge")
     parser.add_argument('--identical_settings', action='store_true', help="Flag indicating whether settings are identical across files.")
 
     args = parser.parse_args()

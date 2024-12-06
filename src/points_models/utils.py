@@ -18,12 +18,19 @@ def generate_results_folder_name(args):
     # Extract important arguments
     parts = []
     parts.append(f"hd{args.hidden_dim}")
-    parts.append(f"nl{args.num_layers}")
+    parts.append(f"nt{args.n_train}")
+    parts.append(f"nv{args.n_val}")
     parts.append(f"bs{args.batch_size}")
     parts.append(f"lr{args.learning_rate}")
     parts.append(f"wd{args.weight_decay}")
     parts.append(f"ep{args.num_epochs}")
     parts.append(f"r{args.random_seed}")
+    
+    if args.model in ['pn1', 'pn2', 'pn3']:
+        parts.append(f"nl{args.num_layers}")
+        
+    if args.model in ['pn0']:
+        parts.append(f"stn{args.STN_dim}")
 
     # Append scheduler info if used
     if args.lr_scheduler == 'exp':
