@@ -2,17 +2,14 @@
 #SBATCH -A m669
 #SBATCH -C gpu
 #SBATCH -q regular
-#SBATCH -t 33:30:00
-#SBATCH --nodes=8
+#SBATCH -t 23:30:00
+#SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
 #SBATCH --cpus-per-task=64
-#SBATCH --output=logs/run_mgn_8_node_4_gpu_%j.out
-#SBATCH --error=logs/run_mgn_8_node_4_gpu_%j.err
+#SBATCH --output=logs/run_pn1_8_node_4_gpu_%j.out
+#SBATCH --error=logs/run_pn1_8_node_4_gpu_%j.err
 
-# =============================================================================
-# SLURM Job Configuration for MeshGraphNet (mgn)
-# =============================================================================
 
 # Bind CPUs to cores for optimal performance
 export SLURM_CPU_BIND="cores"
@@ -26,15 +23,13 @@ module load pytorch/2.3.1
 source activate ignn
 
 # Set the PYTHONPATH to include your project directory
-export PYTHONPATH=/global/homes/t/tiffan/repo/accelerator-surrogate
+export PYTHONPATH=/global/homes/t/tiffan/accelerator-surrogate
 
 # Print the PYTHONPATH for debugging purposes
 echo "PYTHONPATH is set to: $PYTHONPATH"
 
 # Navigate to the project directory
-cd /global/homes/t/tiffan/repo/accelerator-surrogate
-
-python -m pip show accelerate
+cd /global/homes/t/tiffan/accelerator-surrogate
 
 # Record the start time
 start_time=$(date +%s)
@@ -44,55 +39,86 @@ echo "Start time: $(date)"
 # Define Variables for Training
 # =============================================================================
 
-MODEL="mgn"
-DATASET="graph_data_filtered_total_charge_51"  # Replace with your actual dataset name
-DATA_KEYWORD="knn_k5_weighted"
-BASE_DATA_DIR="/global/cfs/cdirs/m669/tiffan/data/"
-BASE_RESULTS_DIR="/global/cfs/cdirs/m669/tiffan/results/"
-TASK="predict_n6d"             # Replace with your specific task
-MODE="train"
-NTRAIN=4156
-BATCH_SIZE=1
-NEPOCHS=3000
+# Data paths
+DATA_CATALOG="src/points_models/catalogs/electrons_vary_distributions_vary_settings_filtered_total_charge_51_catalog_train_nersc.csv"
+STATISTICS_FILE="src/points_models/catalogs/global_statistics_filtered_total_charge_51_train.txt"
+
+# Training parameters
+BATCH_SIZE=4
+N_TRAIN=4156
+N_VAL=0
+N_TEST=0
+RANDOM_SEED=123
+
+NUM_EPOCHS=1000
 HIDDEN_DIM=256
-NUM_LAYERS=6                   # Must be even for autoencoders (encoder + decoder)
+NUM_LAYERS=4
+
+LEARNING_RATE=1e-3
+WEIGHT_DECAY=1e-4
+
+# Model and results
+MODEL="pn1"
+BASE_RESULTS_DIR="/pscratch/sd/t/tiffan/points_results/"
+CHECKPOINT=""  # Path to checkpoint if resuming training; leave empty if starting fresh
 
 # Learning rate scheduler parameters
-LR=1e-4
-LR_SCHEDULER="lin"
-LIN_START_EPOCH=100
-LIN_END_EPOCH=1000
+LR_SCHEDULER="lin"  # Options: 'exp', 'lin', or None
+# EXP_DECAY_RATE=0.001
+# EXP_START_EPOCH=0
+LIN_START_EPOCH=10
+LIN_END_EPOCH=100
 LIN_FINAL_LR=1e-5
 
-# Random seed for reproducibility
-RANDOM_SEED=63
+# Verbose output
+VERBOSE="--verbose"
+
+# WandB settings
+# WANDB_PROJECT="points-training"
+# WANDB_RUN_NAME="pointnet_run"
 
 # =============================================================================
-# Construct the Command with All Required Arguments
+# Construct the Python Command with All Required Arguments
 # =============================================================================
 
-python_command="src/graph_models/train_accelerate_wandb.py \
-    --model $MODEL \
-    --dataset $DATASET \
-    --task $TASK \
-    --data_keyword $DATA_KEYWORD \
-    --base_data_dir $BASE_DATA_DIR \
-    --base_results_dir $BASE_RESULTS_DIR \
-    --mode $MODE \
-    --ntrain $NTRAIN \
+python_command="src/points_models/train.py \
+    --data_catalog $DATA_CATALOG \
+    --statistics_file $STATISTICS_FILE \
     --batch_size $BATCH_SIZE \
-    --nepochs $NEPOCHS \
+    --n_train $N_TRAIN \
+    --n_val $N_VAL \
+    --n_test $N_TEST \
+    --random_seed $RANDOM_SEED \
+    --num_epochs $NUM_EPOCHS \
     --hidden_dim $HIDDEN_DIM \
     --num_layers $NUM_LAYERS \
-    --lr $LR \
-    --lr_scheduler $LR_SCHEDULER \
-    --lin_start_epoch $((LIN_START_EPOCH * SLURM_JOB_NUM_NODES * SLURM_GPUS_PER_NODE)) \
-    --lin_end_epoch $((LIN_END_EPOCH * SLURM_JOB_NUM_NODES * SLURM_GPUS_PER_NODE)) \
-    --lin_final_lr $LIN_FINAL_LR \
-    --random_seed $RANDOM_SEED"
+    --learning_rate $LEARNING_RATE \
+    --weight_decay $WEIGHT_DECAY \
+    --model $MODEL \
+    --base_results_dir $BASE_RESULTS_DIR \
+    $VERBOSE"
+
+# Add checkpoint argument if provided
+if [ -n "$CHECKPOINT" ]; then
+    python_command="$python_command --checkpoint $CHECKPOINT"
+fi
+
+# Add scheduler arguments if scheduler is used
+if [ "$LR_SCHEDULER" = "exp" ]; then
+    python_command="$python_command \
+        --lr_scheduler $LR_SCHEDULER \
+        --exp_decay_rate $EXP_DECAY_RATE \
+        --exp_start_epoch $EXP_START_EPOCH"
+elif [ "$LR_SCHEDULER" = "lin" ]; then
+    python_command="$python_command \
+        --lr_scheduler $LR_SCHEDULER \
+        --lin_start_epoch $LIN_START_EPOCH \
+        --lin_end_epoch $LIN_END_EPOCH \
+        --lin_final_lr $LIN_FINAL_LR"
+fi
 
 # =============================================================================
-# Execute the Training with Accelerate
+# Execute the Training
 # =============================================================================
 
 # Print the command for verification
@@ -101,7 +127,7 @@ echo "Running command: $python_command"
 # Set master address and port for distributed training
 export MASTER_ADDR=$(hostname)
 export MASTER_PORT=29500  # You can choose any free port
-export OMP_NUM_THREADS=64  # Adjust as needed
+export OMP_NUM_THREADS=4  # Adjust as needed
 
 # Use accelerate launch with srun
 srun -l bash -c "
@@ -128,7 +154,7 @@ duration=$((end_time - start_time))
 
 # Convert duration to hours, minutes, and seconds
 hours=$((duration / 3600))
-minutes=$(((duration % 3600) / 60))
+minutes=$(( (duration % 3600) / 60 ))
 seconds=$((duration % 60))
 
 # Display the total time taken

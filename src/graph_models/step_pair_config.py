@@ -27,6 +27,8 @@ def parse_args():
                         help="Flag indicating whether settings are identical across samples.")
     parser.add_argument('--settings_file', type=str, help="Path to the settings file when identical_settings is True.")
     parser.add_argument('--ntrain', type=int, default=None, help="Number of training examples to use.")
+    parser.add_argument('--nval', type=int, default=None, help="Number of validation examples to use.")
+    parser.add_argument('--ntest', type=int, default=None, help="Number of validation examples to use.")
     parser.add_argument('--nepochs', type=int, default=100, help="Number of training epochs.")
     parser.add_argument('--save_checkpoint_every', type=int, default=10, help="Save checkpoint every N epochs.")
     parser.add_argument('--lr', type=float, default=1e-4, help="Learning rate for training.")

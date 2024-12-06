@@ -2,13 +2,13 @@
 #SBATCH -A m669
 #SBATCH -C gpu
 #SBATCH -q regular
-#SBATCH -t 33:30:00
-#SBATCH --nodes=8
+#SBATCH -t 15:30:00
+#SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
 #SBATCH --cpus-per-task=64
-#SBATCH --output=logs/run_mgn_8_node_4_gpu_%j.out
-#SBATCH --error=logs/run_mgn_8_node_4_gpu_%j.err
+#SBATCH --output=logs/run_mgn_1_node_4_gpu_%j.out
+#SBATCH --error=logs/run_mgn_1_node_4_gpu_%j.err
 
 # =============================================================================
 # SLURM Job Configuration for MeshGraphNet (mgn)
@@ -52,15 +52,15 @@ BASE_RESULTS_DIR="/global/cfs/cdirs/m669/tiffan/results/"
 TASK="predict_n6d"             # Replace with your specific task
 MODE="train"
 NTRAIN=4156
-BATCH_SIZE=1
+BATCH_SIZE=4
 NEPOCHS=3000
 HIDDEN_DIM=256
 NUM_LAYERS=6                   # Must be even for autoencoders (encoder + decoder)
 
 # Learning rate scheduler parameters
-LR=1e-4
+LR=1e-3
 LR_SCHEDULER="lin"
-LIN_START_EPOCH=100
+LIN_START_EPOCH=10
 LIN_END_EPOCH=1000
 LIN_FINAL_LR=1e-5
 

@@ -29,7 +29,8 @@ def generate_results_folder_name(args):
     parts = []
     parts.append(f"{args.data_keyword}")
     parts.append(f"r{args.random_seed}")
-    parts.append(f"nt{args.ntrain if args.ntrain is not None else 'all'}")
+    parts.append(f"nt{args.ntrain}")
+    parts.append(f"nv{args.nval}")
     parts.append(f"b{args.batch_size}")
     parts.append(f"lr{args.lr}")
     parts.append(f"h{args.hidden_dim}")

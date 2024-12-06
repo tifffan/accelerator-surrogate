@@ -30,8 +30,12 @@ from step_pair_utils import (
     set_random_seed
 )
 from step_pair_config import parse_args
-from torch.utils.data import Subset
-from torch_geometric.loader import DataLoader
+# from torch.utils.data import Subset
+# from torch_geometric.loader import DataLoader
+
+# Import the data loaders
+from dataloaders import StepPairGraphDataLoaders
+
 import numpy as np
 import logging
 import re
@@ -84,52 +88,378 @@ if __name__ == "__main__":
     use_edge_attr = args.model.lower() in models_requiring_edge_attr
     logging.info(f"Model '{args.model}' requires edge_attr: {use_edge_attr}")
 
-    # Initialize dataset
-    dataset = StepPairGraphDataset(
+    # Initialize data loaders
+    data_loaders = StepPairGraphDataLoaders(
         graph_data_dir=graph_data_dir,
         initial_step=args.initial_step,
         final_step=args.final_step,
-        task=args.task,
+        task='predict_n6d',
         use_settings=args.use_settings,
         identical_settings=args.identical_settings,
         settings_file=args.settings_file,
         use_edge_attr=use_edge_attr,
-        subsample_size=args.subsample_size
+        batch_size=args.batch_size,
+        n_train=args.ntrain,
+        n_val=args.nval,
+        n_test=args.ntest,
     )
+    logging.info(f"Initialized StepPairGraphDataLoaders with n_train={args.n_train}, n_val={args.n_val}, n_test={args.n_test}")
 
-    # Subset dataset if ntrain is specified
-    total_dataset_size = len(dataset)
-    if args.ntrain is not None:
-        np.random.seed(args.random_seed)  # For reproducibility
-        indices = np.random.permutation(total_dataset_size)[:args.ntrain]
-        dataset = Subset(dataset, indices)
-        
-    # After initializing the dataset and subset
-    for i in range(min(5, len(dataset))):
-        sample = dataset[i]
-        if hasattr(sample, 'edge_attr') and sample.edge_attr is not None:
-            logging.info(f"Sample {i} edge_attr shape: {sample.edge_attr.shape}")
-        else:
-            logging.warning(f"Sample {i} is missing edge_attr.")
-
-    # Initialize dataloader
-    dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True)
+    # Get data loaders
+    train_loader = data_loaders.get_train_loader()
+    val_loader = data_loaders.get_val_loader()
+    test_loader = data_loaders.get_test_loader()
 
     # Get a sample data for model initialization
-    sample = dataset[0]
+    sample_batch = next(iter(train_loader))  # Get a batch
+    sample = sample_batch.to(device)
+    # Since sample is a batch of data objects, get the first element
+    if isinstance(sample, list) or isinstance(sample, tuple):
+        sample = sample[0]
+    else:
+        sample = sample
 
     # Model initialization
-    # Reuse your model initialization code from your old train.py, adjusting as necessary.
+    # Model initialization begins
+    if is_autoencoder_model(args.model):
+        # Autoencoder models: 'gcn-ae', 'gat-ae', 'gtr-ae', 'mgn-ae', 'multiscale-topk'
+        # Assert that args.num_layers is even
+        if args.num_layers % 2 != 0:
+            raise ValueError(f"For autoencoder models, 'num_layers' must be an even number. Received: {args.num_layers}")
 
-    # Example placeholder code (you need to replace this with your actual model initialization code):
-    model = GraphConvolutionNetwork(
-        in_channels=sample.x.shape[1],
-        hidden_dim=args.hidden_dim,
-        out_channels=sample.y.shape[1],
-        num_layers=args.num_layers,
-        pool_ratios=args.pool_ratios,
-    )
+        # Calculate depth as half of num_layers
+        depth = args.num_layers // 2
+        logging.info(f"Autoencoder selected. Using depth: {depth} (num_layers: {args.num_layers})")
+
+        # Adjust pool_ratios to match depth - 1 (since pooling layers = depth -1)
+        required_pool_ratios = depth - 1
+        current_pool_ratios = len(args.pool_ratios)
+
+        if required_pool_ratios <= 0:
+            args.pool_ratios = []
+            logging.info(f"No pooling layers required for depth {depth}.")
+        elif current_pool_ratios < required_pool_ratios:
+            # Pad pool_ratios with 1.0 to match required_pool_ratios
+            args.pool_ratios += [1.0] * (required_pool_ratios - current_pool_ratios)
+            logging.warning(f"Pool ratios were padded with 1.0 to match required_pool_ratios: {required_pool_ratios}")
+        elif current_pool_ratios > required_pool_ratios:
+            # Trim pool_ratios to match required_pool_ratios
+            args.pool_ratios = args.pool_ratios[:required_pool_ratios]
+            logging.warning(f"Pool ratios were trimmed to match required_pool_ratios: {required_pool_ratios}")
+
+        # Initialize the corresponding autoencoder model
+        if args.model.lower() == 'gcn-ae':
+            in_channels = sample.x.shape[1]
+            hidden_dim = args.hidden_dim
+            out_channels = sample.y.shape[1]
+            pool_ratios = args.pool_ratios
+
+            model = GraphConvolutionalAutoEncoder(
+                in_channels=in_channels,
+                hidden_dim=hidden_dim,
+                out_channels=out_channels,
+                depth=depth,
+                pool_ratios=pool_ratios
+            )
+            logging.info("Initialized GraphConvolutionalAutoEncoder.")
+
+        elif args.model.lower() == 'gat-ae':
+            in_channels = sample.x.shape[1]
+            hidden_dim = args.hidden_dim
+            out_channels = sample.y.shape[1]
+            pool_ratios = args.pool_ratios
+            heads = args.gat_heads  # Ensure this argument exists
+
+            model = GraphAttentionAutoEncoder(
+                in_channels=in_channels,
+                hidden_dim=hidden_dim,
+                out_channels=out_channels,
+                depth=depth,
+                pool_ratios=pool_ratios,
+                heads=heads
+            )
+            logging.info("Initialized GraphAttentionAutoEncoder.")
+
+        elif args.model.lower() == 'gtr-ae':
+            in_channels = sample.x.shape[1]
+            hidden_dim = args.hidden_dim
+            out_channels = sample.y.shape[1]
+            pool_ratios = args.pool_ratios
+            num_heads = args.gtr_heads  # Ensure this argument exists
+            concat = args.gtr_concat    # Ensure this argument exists
+            dropout = args.gtr_dropout  # Ensure this argument exists
+            edge_dim = sample.edge_attr.shape[1] if hasattr(sample, 'edge_attr') and sample.edge_attr is not None else None
+
+            model = GraphTransformerAutoEncoder(
+                in_channels=in_channels,
+                hidden_dim=hidden_dim,
+                out_channels=out_channels,
+                depth=depth,
+                pool_ratios=pool_ratios,
+                num_heads=num_heads,
+                concat=concat,
+                dropout=dropout,
+                edge_dim=edge_dim
+            )
+            logging.info("Initialized GraphTransformerAutoEncoder.")
+
+        elif args.model.lower() == 'mgn-ae':
+            node_in_dim = sample.x.shape[1]
+            edge_in_dim = sample.edge_attr.shape[1] if hasattr(sample, 'edge_attr') and sample.edge_attr is not None else 0
+            node_out_dim = sample.y.shape[1]
+            hidden_dim = args.hidden_dim
+            pool_ratios = args.pool_ratios
+
+            model = MeshGraphAutoEncoder(
+                node_in_dim=node_in_dim,
+                edge_in_dim=edge_in_dim,
+                node_out_dim=node_out_dim,
+                hidden_dim=hidden_dim,
+                depth=depth,
+                pool_ratios=pool_ratios
+            )
+            logging.info("Initialized MeshGraphAutoEncoder.")
+
+        elif args.model.lower() == 'multiscale-topk':
+            # Initialize TopkMultiscaleGNN
+            input_node_channels = sample.x.shape[1]
+            input_edge_channels = sample.edge_attr.shape[1] if hasattr(sample, 'edge_attr') and sample.edge_attr is not None else 0
+            hidden_channels = args.hidden_dim
+            output_node_channels = sample.y.shape[1]
+            n_mlp_hidden_layers = args.multiscale_n_mlp_hidden_layers
+            n_mmp_layers = args.multiscale_n_mmp_layers
+            n_messagePassing_layers = args.multiscale_n_message_passing_layers
+            max_level_mmp = args.num_layers // 2 - 1  # n_levels = max_level + 1
+            max_level_topk = args.num_layers // 2 - 1
+            pool_ratios = args.pool_ratios
+
+            # Compute l_char (characteristic length scale)
+            edge_index = sample.edge_index
+            pos = sample.pos
+            edge_lengths = torch.norm(pos[edge_index[0]] - pos[edge_index[1]], dim=1)
+            l_char = edge_lengths.mean().item()
+            logging.info(f"Computed l_char (characteristic length scale): {l_char}")
+
+            name = 'topk_multiscale_gnn'
+
+            # Initialize model
+            model = TopkMultiscaleGNN(
+                input_node_channels=input_node_channels,
+                input_edge_channels=input_edge_channels,
+                hidden_channels=hidden_channels,
+                output_node_channels=output_node_channels,
+                n_mlp_hidden_layers=n_mlp_hidden_layers,
+                n_mmp_layers=n_mmp_layers,
+                n_messagePassing_layers=n_messagePassing_layers,
+                max_level_mmp=max_level_mmp,
+                max_level_topk=max_level_topk,
+                pool_ratios=pool_ratios,
+                l_char=l_char,
+                name=name
+            )
+            logging.info("Initialized TopkMultiscaleGNN model.")
+
+        else:
+            raise ValueError(f"Unknown autoencoder model {args.model}")
+
+    else:
+        # Non-autoencoder models: 'gcn', 'gat', 'gtr', 'mgn', 'singlescale', 'multiscale'
+        if args.model.lower() == 'singlescale':
+            # Initialize SinglescaleGNN
+            input_node_channels = sample.x.shape[1]
+            input_edge_channels = sample.edge_attr.shape[1] if hasattr(sample, 'edge_attr') and sample.edge_attr is not None else 0
+            hidden_channels = args.hidden_dim
+            output_node_channels = sample.y.shape[1]
+            n_mlp_hidden_layers = 0  # Set based on MeshGraphNet
+            n_messagePassing_layers = args.num_layers
+
+            name = 'singlescale_gnn'
+
+            # Initialize model
+            model = SinglescaleGNN(
+                input_node_channels=input_node_channels,
+                input_edge_channels=input_edge_channels,
+                hidden_channels=hidden_channels,
+                output_node_channels=output_node_channels,
+                n_mlp_hidden_layers=n_mlp_hidden_layers,
+                n_messagePassing_layers=n_messagePassing_layers,
+                name=name
+            )
+            logging.info("Initialized SinglescaleGNN model.")
+
+        elif args.model.lower() == 'multiscale':
+            # Initialize MultiscaleGNN
+            input_node_channels = sample.x.shape[1]
+            input_edge_channels = sample.edge_attr.shape[1] if hasattr(sample, 'edge_attr') and sample.edge_attr is not None else 0
+            hidden_channels = args.hidden_dim
+            output_node_channels = sample.y.shape[1]
+            n_mlp_hidden_layers = args.multiscale_n_mlp_hidden_layers
+            n_mmp_layers = args.multiscale_n_mmp_layers
+            n_messagePassing_layers = args.multiscale_n_message_passing_layers
+            max_level = args.num_layers // 2 - 1  # n_levels = max_level + 1
+
+            # Compute l_char (characteristic length scale)
+            edge_index = sample.edge_index
+            pos = sample.pos
+            edge_lengths = torch.norm(pos[edge_index[0]] - pos[edge_index[1]], dim=1)
+            l_char = edge_lengths.mean().item()
+            logging.info(f"Computed l_char (characteristic length scale): {l_char}")
+
+            name = 'multiscale_gnn'
+
+            # Initialize model
+            model = MultiscaleGNN(
+                input_node_channels=input_node_channels,
+                input_edge_channels=input_edge_channels,
+                hidden_channels=hidden_channels,
+                output_node_channels=output_node_channels,
+                n_mlp_hidden_layers=n_mlp_hidden_layers,
+                n_mmp_layers=n_mmp_layers,
+                n_messagePassing_layers=n_messagePassing_layers,
+                max_level=max_level,
+                l_char=l_char,
+                name=name
+            )
+            logging.info("Initialized MultiscaleGNN model.")
+
+        elif args.model.lower() == 'gcn':
+            # Ensure pool_ratios length matches num_layers - 2
+            required_pool_ratios = args.num_layers - 2
+            current_pool_ratios = len(args.pool_ratios)
+
+            if required_pool_ratios <= 0:
+                args.pool_ratios = []
+                logging.info(f"No pooling layers required for num_layers {args.num_layers}.")
+            elif current_pool_ratios < required_pool_ratios:
+                args.pool_ratios += [1.0] * (required_pool_ratios - current_pool_ratios)
+                logging.warning(f"Pool ratios were padded with 1.0 to match required_pool_ratios: {required_pool_ratios}")
+            elif current_pool_ratios > required_pool_ratios:
+                args.pool_ratios = args.pool_ratios[:required_pool_ratios]
+                logging.warning(f"Pool ratios were trimmed to match required_pool_ratios: {required_pool_ratios}")
+
+            # Model parameters specific to GraphConvolutionNetwork
+            in_channels = sample.x.shape[1]
+            hidden_dim = args.hidden_dim
+            out_channels = sample.y.shape[1]
+            num_layers = args.num_layers
+            pool_ratios = args.pool_ratios
+
+            # Initialize GraphConvolutionNetwork model
+            model = GraphConvolutionNetwork(
+                in_channels=in_channels,
+                hidden_dim=hidden_dim,
+                out_channels=out_channels,
+                num_layers=num_layers,
+                pool_ratios=pool_ratios,
+            )
+            logging.info("Initialized GraphConvolutionNetwork model.")
+
+        elif args.model.lower() == 'gat':
+            # Ensure pool_ratios length matches num_layers - 2
+            required_pool_ratios = args.num_layers - 2
+            current_pool_ratios = len(args.pool_ratios)
+
+            if required_pool_ratios <= 0:
+                args.pool_ratios = []
+                logging.info(f"No pooling layers required for num_layers {args.num_layers}.")
+            elif current_pool_ratios < required_pool_ratios:
+                args.pool_ratios += [1.0] * (required_pool_ratios - current_pool_ratios)
+                logging.warning(f"Pool ratios were padded with 1.0 to match required_pool_ratios: {required_pool_ratios}")
+            elif current_pool_ratios > required_pool_ratios:
+                args.pool_ratios = args.pool_ratios[:required_pool_ratios]
+                logging.warning(f"Pool ratios were trimmed to match required_pool_ratios: {required_pool_ratios}")
+
+            # Model parameters specific to GraphAttentionNetwork
+            in_channels = sample.x.shape[1]
+            hidden_dim = args.hidden_dim
+            out_channels = sample.y.shape[1]
+            num_layers = args.num_layers
+            pool_ratios = args.pool_ratios
+            heads = args.gat_heads  # Ensure this argument exists
+
+            # Initialize GraphAttentionNetwork model
+            model = GraphAttentionNetwork(
+                in_channels=in_channels,
+                hidden_dim=hidden_dim,
+                out_channels=out_channels,
+                num_layers=num_layers,
+                pool_ratios=pool_ratios,
+                heads=heads,
+            )
+            logging.info("Initialized GraphAttentionNetwork model.")
+
+        elif args.model.lower() == 'gtr':
+            # Model parameters specific to GraphTransformer
+            in_channels = sample.x.shape[1]
+            hidden_dim = args.hidden_dim
+            out_channels = sample.y.shape[1]
+            num_layers = args.num_layers
+            pool_ratios = args.pool_ratios
+            num_heads = args.gtr_heads
+            concat = args.gtr_concat
+            dropout = args.gtr_dropout
+            edge_dim = sample.edge_attr.shape[1] if hasattr(sample, 'edge_attr') and sample.edge_attr is not None else None
+
+            # Adjust pool_ratios to match num_layers - 2
+            required_pool_ratios = num_layers - 2
+            current_pool_ratios = len(pool_ratios)
+
+            if required_pool_ratios <= 0:
+                pool_ratios = []
+                logging.info(f"No pooling layers required for num_layers {num_layers}.")
+            elif current_pool_ratios < required_pool_ratios:
+                pool_ratios += [1.0] * (required_pool_ratios - current_pool_ratios)
+                logging.warning(f"Pool ratios were padded with 1.0 to match required_pool_ratios: {required_pool_ratios}")
+            elif current_pool_ratios > required_pool_ratios:
+                pool_ratios = pool_ratios[:required_pool_ratios]
+                logging.warning(f"Pool ratios were trimmed to match required_pool_ratios: {required_pool_ratios}")
+
+            # Initialize GraphTransformer model
+            model = GraphTransformer(
+                in_channels=in_channels,
+                hidden_dim=hidden_dim,
+                out_channels=out_channels,
+                num_layers=num_layers,
+                pool_ratios=pool_ratios,
+                num_heads=num_heads,
+                concat=concat,
+                dropout=dropout,
+                edge_dim=edge_dim,
+            )
+            logging.info("Initialized GraphTransformer model.")
+
+        elif args.model.lower() == 'mgn':
+            # Model parameters specific to MeshGraphNet
+            node_in_dim = sample.x.shape[1]
+            edge_in_dim = sample.edge_attr.shape[1] if hasattr(sample, 'edge_attr') and sample.edge_attr is not None else 0
+            node_out_dim = sample.y.shape[1]
+            hidden_dim = args.hidden_dim
+            num_layers = args.num_layers
+
+            # Initialize MeshGraphNet model
+            model = MeshGraphNet(
+                node_in_dim=node_in_dim,
+                edge_in_dim=edge_in_dim,
+                node_out_dim=node_out_dim,
+                hidden_dim=hidden_dim,
+                num_layers=num_layers
+            )
+            logging.info("Initialized MeshGraphNet model.")
+
+        else:
+            raise ValueError(f"Unknown model {args.model}")
     logging.info(f"Initialized model: {args.model}")
+    # Model initialization ends
+
+    # # Example placeholder code (you need to replace this with your actual model initialization code):
+    # model = GraphConvolutionNetwork(
+    #     in_channels=sample.x.shape[1],
+    #     hidden_dim=args.hidden_dim,
+    #     out_channels=sample.y.shape[1],
+    #     num_layers=args.num_layers,
+    #     pool_ratios=args.pool_ratios,
+    # )
+    # logging.info(f"Initialized model: {args.model}")
 
     model.to(device)
     logging.info(f"Model moved to {device}.")

@@ -1,6 +1,5 @@
 # datasets.py
 
-from torch_geometric.data import Data  # Import Data class
 import torch
 from torch.utils.data import Dataset
 from torch_geometric.data import Data
