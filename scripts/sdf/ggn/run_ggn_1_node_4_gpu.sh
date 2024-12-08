@@ -9,7 +9,7 @@
 #SBATCH --gpus-per-node=4
 #SBATCH --nodes=1
 #SBATCH --mem-per-cpu=16G
-#SBATCH --time=0:30:00
+#SBATCH --time=33:30:00
 
 # Set the PYTHONPATH to include your project directory
 export PYTHONPATH=/sdf/home/t/tiffan/repo/accelerator-surrogate
@@ -36,17 +36,19 @@ DATASET="graph_data_filtered_total_charge_51"  # Replace with your actual datase
 DATA_KEYWORD="knn_k5_weighted"
 TASK="predict_n6d"             # Replace with your specific task
 MODE="train"
-NTRAIN=100
+NTRAIN=3324
+NVAL=416
+NTEST=416
 BATCH_SIZE=16
-NEPOCHS=1
-HIDDEN_DIM=128
-NUM_LAYERS=6                   # Must be even for autoencoders (encoder + decoder)
+NEPOCHS=3000
+HIDDEN_DIM=256
+NUM_LAYERS=4                   # Must be even for autoencoders (encoder + decoder)
 
 # Learning rate scheduler parameters
-LR=1e-3
+LR=1e-4
 LR_SCHEDULER="lin"
 LIN_START_EPOCH=10
-LIN_END_EPOCH=2000
+LIN_END_EPOCH=1000
 LIN_FINAL_LR=1e-5
 
 # Random seed for reproducibility
@@ -64,7 +66,9 @@ python_command="src/graph_models/context_train.py \
     --base_data_dir $BASE_DATA_DIR \
     --base_results_dir $BASE_RESULTS_DIR \
     --mode $MODE \
-    --ntrain $NTRAIN \
+    --n_train $NTRAIN \
+    --n_val $NVAL \
+    --n_test $NTEST \
     --batch_size $BATCH_SIZE \
     --nepochs $NEPOCHS \
     --hidden_dim $HIDDEN_DIM \

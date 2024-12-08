@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --account=ad:beamphysics
 #SBATCH --partition=ampere
-#SBATCH --job-name=run_acgn_1_4
-#SBATCH --output=logs/run_acgn_1_4_%j.out
-#SBATCH --error=logs/run_acgn_1_4_%j.err
+#SBATCH --job-name=run_cgn_1_4
+#SBATCH --output=logs/run_cgn_1_4_%j.out
+#SBATCH --error=logs/run_cgn_1_4_%j.err
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --gpus-per-node=4
@@ -31,7 +31,7 @@ echo "Start time: $(date)"
 BASE_DATA_DIR="/sdf/data/ad/ard/u/tiffan/data/"
 BASE_RESULTS_DIR="/sdf/data/ad/ard/u/tiffan/results/"
 
-MODEL="acgn"
+MODEL="cgn"
 DATASET="graph_data_filtered_total_charge_51"  # Replace with your actual dataset name
 DATA_KEYWORD="knn_k5_weighted"
 TASK="predict_n6d"             # Replace with your specific task
@@ -40,12 +40,12 @@ NTRAIN=3324
 NVAL=416
 NTEST=416
 BATCH_SIZE=16
-NEPOCHS=3000
+NEPOCHS=2000
 HIDDEN_DIM=256
 NUM_LAYERS=4                   # Must be even for autoencoders (encoder + decoder)
 
 # Learning rate scheduler parameters
-LR=1e-4
+LR=1e-3
 LR_SCHEDULER="lin"
 LIN_START_EPOCH=10
 LIN_END_EPOCH=1000
@@ -53,6 +53,17 @@ LIN_FINAL_LR=1e-5
 
 # Random seed for reproducibility
 RANDOM_SEED=63
+
+# =============================================================================
+# New Variables for Testing Preload and Edge Attribute Method
+# =============================================================================
+
+# Define the edge attribute computation method (choose from 'v0', 'v0n', 'v1', 'v1n', 'v2', 'v2n', 'v3')
+EDGE_ATTR_METHOD="v3"  # Example: using 'v1' is default
+
+# Flag to preload data into memory (set to "--preload_data" to enable, leave empty to disable)
+PRELOAD_DATA_FLAG="--preload_data"  # To enable preloading
+# PRELOAD_DATA_FLAG=""  # To disable preloading
 
 # =============================================================================
 # Construct the Python Command with All Required Arguments
@@ -78,7 +89,9 @@ python_command="src/graph_models/context_train.py \
     --lin_start_epoch $((LIN_START_EPOCH * SLURM_JOB_NUM_NODES * SLURM_GPUS_PER_NODE)) \
     --lin_end_epoch $((LIN_END_EPOCH * SLURM_JOB_NUM_NODES * SLURM_GPUS_PER_NODE)) \
     --lin_final_lr $LIN_FINAL_LR \
-    --random_seed $RANDOM_SEED"
+    --random_seed $RANDOM_SEED \
+    --edge_attr_method $EDGE_ATTR_METHOD \
+    $PRELOAD_DATA_FLAG"
 
 # =============================================================================
 # Execute the Training

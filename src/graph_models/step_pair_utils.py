@@ -28,11 +28,13 @@ def generate_results_folder_name(args):
     # Extract important arguments
     parts = []
     parts.append(f"{args.data_keyword}")
+    parts.append(f"ea{args.edge_attr_method}")
     parts.append(f"r{args.random_seed}")
     parts.append(f"nt{args.ntrain}")
     parts.append(f"nv{args.nval}")
     parts.append(f"b{args.batch_size}")
     parts.append(f"lr{args.lr}")
+    parts.append(f"wd{args.wd}")
     parts.append(f"h{args.hidden_dim}")
     parts.append(f"ly{args.num_layers}")
     parts.append(f"pr{'_'.join(map(lambda x: f'{x:.2f}', args.pool_ratios))}")

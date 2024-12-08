@@ -306,6 +306,11 @@ from src.graph_models.models.multiscale.gnn import (
     MultiscaleGNN,
     TopkMultiscaleGNN
 )
+from src.graph_models.context_models.context_graph_networks import (
+    GeneralGraphNetwork,
+    ConditionalGraphNetwork,
+    AttentionConditionalGraphNetwork
+)
 
 # Import accelerate library
 from accelerate import Accelerator
@@ -330,6 +335,12 @@ def identify_model_type(model):
         return 'GraphTransformer'
     elif isinstance(model, GraphTransformerAutoEncoder):
         return 'GraphTransformerAutoEncoder'
+    elif isinstance(model, GeneralGraphNetwork):
+        return 'GeneralGraphNetwork'
+    elif isinstance(model, ConditionalGraphNetwork):
+        return 'ConditionalGraphNetwork'
+    elif isinstance(model, AttentionConditionalGraphNetwork):
+        return 'AttentionConditionalGraphNetwork'
     else:
         return 'UnknownModel'
 
@@ -611,10 +622,37 @@ class GraphPredictionTrainer(BaseTrainer):
                 edge_attr=data.edge_attr if hasattr(data, 'edge_attr') else None,
                 batch=data.batch
             )
-        else:  # GraphConvolutionNetwork, GraphAttentionNetwork, etc.
+        elif model_type in ['GraphConvolutionNetwork', 'GraphAttentionNetwork']:
             x_pred = self.model(
                 x=data.x,
                 edge_index=data.edge_index,
                 batch=data.batch
             )
+        elif model_type == 'GeneralGraphNetwork':
+            x_pred = self.model(
+                x=data.x,
+                edge_index=data.edge_index,
+                edge_attr=data.edge_attr,
+                u=data.set,
+                batch=data.batch
+            )
+        elif model_type == 'ConditionalGraphNetwork':
+            # print("data.set.shape", data.set.shape)           
+            x_pred = self.model(
+                x=data.x,
+                edge_index=data.edge_index,
+                edge_attr=data.edge_attr,
+                conditions=data.set,
+                batch=data.batch
+            )
+        elif model_type == 'AttentionConditionalGraphNetwork':
+            x_pred = self.model(
+                x=data.x,
+                edge_index=data.edge_index,
+                edge_attr=data.edge_attr,
+                conditions=data.set,
+                batch=data.batch
+            )
+        else:
+            raise ValueError(f"Unknown model type: {model_type}")
         return x_pred

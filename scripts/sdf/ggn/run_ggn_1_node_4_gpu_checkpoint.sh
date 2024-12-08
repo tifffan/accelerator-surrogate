@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --account=ad:beamphysics
 #SBATCH --partition=ampere
-#SBATCH --job-name=run_acgn_1_4
-#SBATCH --output=logs/run_acgn_1_4_%j.out
-#SBATCH --error=logs/run_acgn_1_4_%j.err
+#SBATCH --job-name=run_ggn_1_4
+#SBATCH --output=logs/run_ggn_1_4_%j.out
+#SBATCH --error=logs/run_ggn_1_4_%j.err
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --gpus-per-node=4
@@ -31,7 +31,7 @@ echo "Start time: $(date)"
 BASE_DATA_DIR="/sdf/data/ad/ard/u/tiffan/data/"
 BASE_RESULTS_DIR="/sdf/data/ad/ard/u/tiffan/results/"
 
-MODEL="acgn"
+MODEL="ggn"
 DATASET="graph_data_filtered_total_charge_51"  # Replace with your actual dataset name
 DATA_KEYWORD="knn_k5_weighted"
 TASK="predict_n6d"             # Replace with your specific task
@@ -53,6 +53,9 @@ LIN_FINAL_LR=1e-5
 
 # Random seed for reproducibility
 RANDOM_SEED=63
+
+# Checkpoint path
+CHECKPOINT="/sdf/data/ad/ard/u/tiffan/results/ggn/graph_data_filtered_total_charge_51/predict_n6d/knn_k5_weighted_r63_nt3324_nv416_b16_lr0.0001_h256_ly4_pr1.00_ep3000_sch_lin_40_4000_1e-05/checkpoints/model-69.pth"
 
 # =============================================================================
 # Construct the Python Command with All Required Arguments
@@ -78,7 +81,8 @@ python_command="src/graph_models/context_train.py \
     --lin_start_epoch $((LIN_START_EPOCH * SLURM_JOB_NUM_NODES * SLURM_GPUS_PER_NODE)) \
     --lin_end_epoch $((LIN_END_EPOCH * SLURM_JOB_NUM_NODES * SLURM_GPUS_PER_NODE)) \
     --lin_final_lr $LIN_FINAL_LR \
-    --random_seed $RANDOM_SEED"
+    --random_seed $RANDOM_SEED \
+    --checkpoint $CHECKPOINT"
 
 # =============================================================================
 # Execute the Training

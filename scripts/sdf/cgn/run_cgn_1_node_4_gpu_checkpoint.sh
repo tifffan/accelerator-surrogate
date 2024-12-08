@@ -43,9 +43,9 @@ HIDDEN_DIM=128
 NUM_LAYERS=6                   # Must be even for autoencoders (encoder + decoder)
 
 # Learning rate scheduler parameters
-LR=1e-4
+LR=1e-3
 LR_SCHEDULER="lin"
-LIN_START_EPOCH=100
+LIN_START_EPOCH=10
 LIN_END_EPOCH=1000
 LIN_FINAL_LR=1e-5
 

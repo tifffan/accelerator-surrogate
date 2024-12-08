@@ -1026,8 +1026,8 @@ if __name__ == "__main__":
     logging.info(f"Model moved to {device}.")
 
     # Optimizer
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
-    logging.info(f"Initialized Adam optimizer with learning rate: {args.lr}")
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
+    logging.info(f"Initialized Adam optimizer with learning rate: {args.lr} and weight decay: {args.wd}")
 
     # Scheduler
     scheduler = get_scheduler(args, optimizer)

@@ -40,8 +40,8 @@ NTRAIN=3324
 NVAL=416
 NTEST=416
 BATCH_SIZE=16
-NEPOCHS=2000
-HIDDEN_DIM=128
+NEPOCHS=3000
+HIDDEN_DIM=256
 NUM_LAYERS=4                   # Must be even for autoencoders (encoder + decoder)
 
 # Multiscale-specific parameters

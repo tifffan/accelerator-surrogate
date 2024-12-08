@@ -7,6 +7,7 @@ def parse_args():
 
     parser.add_argument('--data_catalog', type=str, default='catalogs/electrons_vary_distributions_vary_settings_filtered_total_charge_51_catalog_train_sdf.csv', help='Path to data catalog')
     parser.add_argument('--statistics_file', type=str, default='catalogs/global_statistics_filtered_total_charge_51_train.txt', help='Path to statistics file')
+    parser.add_argument('--edge_attr_method', type=str, default='v1', help='Method for generating edge attributes')
 
     parser.add_argument('--batch_size', type=int, default=16, help='Batch size for training')
     parser.add_argument('--n_train', type=int, default=4156, help='Number of training samples')

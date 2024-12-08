@@ -17,6 +17,8 @@ def parse_args():
                         help="Base directory where the results are stored.")
 
     parser.add_argument('--dataset', type=str, required=True, help="Dataset identifier")
+    parser.add_argument('--preload_data', action='store_true', help="Preload the dataset into memory")
+    parser.add_argument('--edge_attr_method', type=str, default='v1', help='Method for generating edge attributes')
     parser.add_argument('--task', type=str, required=True, choices=['predict_n6d', 'predict_n4d', 'predict_n2d'],
                         help="Task to perform")
     parser.add_argument('--n_train', type=int, default=800, help="Number of training samples")
@@ -25,6 +27,7 @@ def parse_args():
     parser.add_argument('--nepochs', type=int, default=100, help="Number of training epochs")
     parser.add_argument('--save_checkpoint_every', type=int, default=10, help="Save checkpoint every N epochs")
     parser.add_argument('--lr', type=float, default=1e-4, help="Learning rate for training")
+    parser.add_argument('--wd', type=float, default=0.0, help="Weight decay (L2 regularization) factor")
     parser.add_argument('--batch_size', type=int, default=8, help="Batch size for training")
     parser.add_argument('--hidden_dim', type=int, default=64, help="Hidden layer dimension size")
     parser.add_argument('--num_layers', type=int, default=3, help="Number of layers in the model")
