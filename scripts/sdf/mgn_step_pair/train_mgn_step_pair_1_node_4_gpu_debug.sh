@@ -66,7 +66,7 @@ RANDOM_SEED=63
 # Construct the Python Command with All Required Arguments
 # =============================================================================
 
-python_command="src/graph_models/step_pair_train_accelerate.py \
+python_command="src/graph_models/step_pair_train.py \
     --model $MODEL \
     --dataset $DATASET \
     --task $TASK \

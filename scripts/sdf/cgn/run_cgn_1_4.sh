@@ -9,7 +9,7 @@
 #SBATCH --gpus-per-node=4
 #SBATCH --nodes=1
 #SBATCH --mem-per-cpu=64G
-#SBATCH --time=33:30:00
+#SBATCH --time=3:30:00
 
 # Set the PYTHONPATH to include your project directory
 export PYTHONPATH=/sdf/home/t/tiffan/repo/accelerator-surrogate
@@ -40,11 +40,12 @@ NTRAIN=3324
 NVAL=416
 NTEST=416
 BATCH_SIZE=16
-NEPOCHS=2000
+NEPOCHS=500
 HIDDEN_DIM=256
 NUM_LAYERS=4                   # Must be even for autoencoders (encoder + decoder)
 
 # Learning rate scheduler parameters
+WD=1e-4
 LR=1e-3
 LR_SCHEDULER="lin"
 LIN_START_EPOCH=10
@@ -84,6 +85,7 @@ python_command="src/graph_models/context_train.py \
     --nepochs $NEPOCHS \
     --hidden_dim $HIDDEN_DIM \
     --num_layers $NUM_LAYERS \
+    --wd $WD \
     --lr $LR \
     --lr_scheduler $LR_SCHEDULER \
     --lin_start_epoch $((LIN_START_EPOCH * SLURM_JOB_NUM_NODES * SLURM_GPUS_PER_NODE)) \
