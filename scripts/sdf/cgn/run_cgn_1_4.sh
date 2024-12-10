@@ -8,7 +8,7 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --gpus-per-node=4
 #SBATCH --nodes=1
-#SBATCH --mem-per-cpu=16G
+#SBATCH --mem-per-cpu=64G
 #SBATCH --time=33:30:00
 
 # Set the PYTHONPATH to include your project directory
