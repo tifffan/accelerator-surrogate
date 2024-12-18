@@ -35,12 +35,12 @@ IDENTICAL_SETTINGS="--identical_settings"
 
 MODEL="mgn"
 DATASET="sequence_graph_data_archive_4"
-DATA_KEYWORD="knn_edges_k5_weighted"
+DATA_KEYWORD="knn_k5_weighted"
 TASK="predict_n6d"
 MODE="train"
 
-INITIAL_STEP=5
-FINAL_STEP=10
+INITIAL_STEP=10
+FINAL_STEP=76
 
 NTRAIN=1600
 NVAL=1600

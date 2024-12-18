@@ -40,9 +40,9 @@ NTRAIN=3324
 NVAL=416
 NTEST=416
 BATCH_SIZE=16
-NEPOCHS=500
+NEPOCHS=1000
 HIDDEN_DIM=256
-NUM_LAYERS=4                   # Must be even for autoencoders (encoder + decoder)
+NUM_LAYERS=6                   # Must be even for autoencoders (encoder + decoder)
 
 # Learning rate scheduler parameters
 WD=5e-5
@@ -60,7 +60,7 @@ RANDOM_SEED=63
 # =============================================================================
 
 # Define the edge attribute computation method (choose from 'v0', 'v0n', 'v1', 'v1n', 'v2', 'v2n', 'v3')
-EDGE_ATTR_METHOD="v0"  # Example: using 'v1' is default
+EDGE_ATTR_METHOD="v3"  # Example: using 'v1' is default
 
 # Flag to preload data into memory (set to "--preload_data" to enable, leave empty to disable)
 PRELOAD_DATA_FLAG="--preload_data"  # To enable preloading

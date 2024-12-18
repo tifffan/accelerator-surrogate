@@ -2,7 +2,7 @@
 
 import torch
 import torch.nn.functional as F
-from src.datasets.datasets import StepPairGraphDataset
+from src.graph_models.dataloaders import StepPairGraphDataset
 from src.graph_models.models.graph_networks import (
     GraphConvolutionNetwork,
     GraphAttentionNetwork,
@@ -22,7 +22,7 @@ from src.graph_models.models.multiscale.gnn import (
     TopkMultiscaleGNN
 )
 
-from trainers_accelerate import GraphPredictionTrainer
+from trainers import GraphPredictionTrainer
 from step_pair_utils import (
     generate_results_folder_name,
     save_metadata,
@@ -30,13 +30,10 @@ from step_pair_utils import (
     set_random_seed
 )
 from step_pair_config import parse_args
-# from torch.utils.data import Subset
-# from torch_geometric.loader import DataLoader
 
 # Import the data loaders
 from dataloaders import StepPairGraphDataLoaders
 
-import numpy as np
 import logging
 import re
 import os
