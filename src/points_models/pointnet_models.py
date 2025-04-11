@@ -134,8 +134,8 @@ class PointNetRegression(nn.Module):
         self.bn3 = nn.BatchNorm1d(128)
     
     def forward(self, x):
-        batchsize = x.size()[0]
-        n_pts = x.size()[2]
+        # batchsize = x.size()[0]
+        # n_pts = x.size()[2]
         x, trans, trans_feat = self.feat(x)
         x = F.relu(self.bn1(self.conv1(x)))  # (batchsize, 512, n_pts)
         x = F.relu(self.bn2(self.conv2(x)))  # (batchsize, 256, n_pts)

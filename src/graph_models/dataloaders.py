@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 
 class GraphDataset(Dataset):
     def __init__(self, initial_graph_dir, final_graph_dir, settings_dir, task='predict_n6d',
-                 use_edge_attr=False, edge_attr_method="v0", preload_data=False,
+                 use_edge_attr=False, edge_attr_method="v1", preload_data=False,
                  expected_initial_x_dim=6, expected_settings_dim=6):
         """
         Initializes the GraphDataset.
