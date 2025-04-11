@@ -18,7 +18,9 @@ from pmd_beamphysics import ParticleGroup  # Import ParticleGroup
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Import your models and utilities
-from src.datasets.datasets import GraphDataset
+from src.graph_models.dataloaders import GraphDataset
+
+
 from utils import generate_data_dirs, set_random_seed
 from src.graph_models.models.graph_networks import (
     GraphConvolutionNetwork,
@@ -608,66 +610,6 @@ def initialize_model(hyperparams, sample):
                 sys.exit(1)
 
         return model
-
-# def evaluate_model(model, dataloader, device, metadata_final_path, results_folder):
-#     model.eval()
-#     all_errors = []
-#     all_predictions = []
-#     all_targets = []
-#     with torch.no_grad():
-#         for data in tqdm(dataloader, desc="Evaluating Model"):
-#             data = data.to(device)
-#             x_pred = model_forward(model, data)
-#             mse = F.mse_loss(x_pred, data.y, reduction='none').mean(dim=1)
-#             batch_indices = data.batch.cpu().numpy()
-#             graph_indices = np.unique(batch_indices)
-#             for idx in graph_indices:
-#                 mask = (batch_indices == idx)
-#                 graph_mse = mse[mask].mean().item()
-#                 all_errors.append(graph_mse)
-#                 all_predictions.append(x_pred[mask].cpu())
-#                 all_targets.append(data.y[mask].cpu())
-#     all_errors = np.array(all_errors)
-#     sorted_indices = np.argsort(all_errors)
-#     min_mse_indices = sorted_indices[:5]
-#     max_mse_indices = sorted_indices[-5:]
-
-#     global_mean, global_std = load_global_statistics(metadata_final_path)
-
-#     def inverse_normalize(normalized_data):
-#         return normalized_data * global_std + global_mean
-
-#     # For min MSE samples
-#     for idx in min_mse_indices:
-#         pred = all_predictions[idx]
-#         target = all_targets[idx]
-#         pred_original = inverse_normalize(pred)
-#         target_original = inverse_normalize(target)
-#         pred_pg = transform_to_particle_group(pred_original)
-#         target_pg = transform_to_particle_group(target_original)
-#         plot_particle_groups(pred_pg, target_pg, idx, 'min', results_folder)
-#         pred_norm_emit_x = compute_normalized_emittance_x(pred_pg)
-#         target_norm_emit_x = compute_normalized_emittance_x(target_pg)
-#         relative_error = abs(pred_norm_emit_x - target_norm_emit_x) / abs(target_norm_emit_x)
-#         print(f"Sample {idx} (min MSE): Relative Error in norm_emit_x: {relative_error}")
-
-#     # For max MSE samples
-#     for idx in max_mse_indices:
-#         pred = all_predictions[idx]
-#         target = all_targets[idx]
-#         pred_original = inverse_normalize(pred)
-#         target_original = inverse_normalize(target)
-#         pred_pg = transform_to_particle_group(pred_original)
-#         target_pg = transform_to_particle_group(target_original)
-#         plot_particle_groups(pred_pg, target_pg, idx, 'max', results_folder)
-#         pred_norm_emit_x = compute_normalized_emittance_x(pred_pg)
-#         target_norm_emit_x = compute_normalized_emittance_x(target_pg)
-#         relative_error = abs(pred_norm_emit_x - target_norm_emit_x) / abs(target_norm_emit_x)
-#         print(f"Sample {idx} (max MSE): Relative Error in norm_emit_x: {relative_error}")
-
-#     # Compute overall test error
-#     test_error = all_errors.mean()
-#     print(f"Test Error (MSE): {test_error}")
 
 def evaluate_model(model, dataloader, device, metadata_final_path, results_folder):
     model.eval()

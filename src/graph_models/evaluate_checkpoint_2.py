@@ -18,7 +18,7 @@ from pmd_beamphysics import ParticleGroup  # Import ParticleGroup
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Import your models and utilities
-from src.datasets.datasets import GraphDataset
+from src.graph_models.dataloaders import GraphDataset
 from utils import generate_data_dirs, set_random_seed
 from src.graph_models.models.graph_networks import (
     GraphConvolutionNetwork,
@@ -272,30 +272,30 @@ def compute_normalized_emittance_z(particle_group):
     return norm_emit_z
 
 
-def plot_particle_groups(pred_pg, target_pg, idx, error_type, results_folder):
-    """
-    Plots and saves figures for predicted and target ParticleGroups.
+# def plot_particle_groups(pred_pg, target_pg, idx, error_type, results_folder):
+#     """
+#     Plots and saves figures for predicted and target ParticleGroups.
 
-    Args:
-        pred_pg (ParticleGroup): Predicted ParticleGroup
-        target_pg (ParticleGroup): Target ParticleGroup
-        idx (int): Sample index
-        error_type (str): 'min' or 'max'
-        results_folder (str): Folder to save figures
-    """
-    for x_var, p_var in [('x', 'px'), ('y', 'py'), ('z', 'pz')]:
-        # Plot predicted
-        plt.figure(figsize=(6, 6))
-        pred_pg.plot(x_var, p_var, label='Predicted', alpha=0.6)
-        plt.grid(True)
-        plt.savefig(os.path.join(results_folder, f'{error_type}_mse_sample_{idx}_pred_{x_var}_{p_var}.png'))
-        plt.close()
-        # Plot target
-        plt.figure(figsize=(6, 6))
-        target_pg.plot(x_var, p_var, label='Target', alpha=0.6)
-        plt.grid(True)
-        plt.savefig(os.path.join(results_folder, f'{error_type}_mse_sample_{idx}_target_{x_var}_{p_var}.png'))
-        plt.close()
+#     Args:
+#         pred_pg (ParticleGroup): Predicted ParticleGroup
+#         target_pg (ParticleGroup): Target ParticleGroup
+#         idx (int): Sample index
+#         error_type (str): 'min' or 'max'
+#         results_folder (str): Folder to save figures
+#     """
+#     for x_var, p_var in [('x', 'px'), ('y', 'py'), ('z', 'pz')]:
+#         # Plot predicted
+#         plt.figure(figsize=(6, 6))
+#         pred_pg.plot(x_var, p_var, label='Predicted', alpha=0.6)
+#         plt.grid(True)
+#         plt.savefig(os.path.join(results_folder, f'{error_type}_mse_sample_{idx}_pred_{x_var}_{p_var}.png'))
+#         plt.close()
+#         # Plot target
+#         plt.figure(figsize=(6, 6))
+#         target_pg.plot(x_var, p_var, label='Target', alpha=0.6)
+#         plt.grid(True)
+#         plt.savefig(os.path.join(results_folder, f'{error_type}_mse_sample_{idx}_target_{x_var}_{p_var}.png'))
+#         plt.close()
 
 
 def initialize_model(hyperparams, sample):
@@ -661,13 +661,238 @@ def initialize_model(hyperparams, sample):
                 num_layers=num_layers
             )
             logging.info("Initialized MeshGraphNet model.")
-
+        elif model_name == 'pn0':
+            model = PointNetRegression(input_dim=6, output_dim=6, hidden_dim=64)
         else:
             logging.error(f"Unknown model '{model_name}'.")
             sys.exit(1)
 
     return model
 
+
+import os
+import matplotlib.pyplot as plt
+
+import os
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+import tempfile
+
+def plot_particle_groups(pred_pg, target_pg, idx, error_type, results_folder,
+                         mse_value, rel_err_x, rel_err_y, rel_err_z):
+    """
+    Plots predicted and target ParticleGroups onto a single figure by:
+    1. Using return_figure=True to get separate figures.
+    2. Saving those figures as temporary images.
+    3. Reading the images and displaying them with imshow on subplots.
+
+    This avoids manipulating artists directly and guarantees that the plots look 
+    the same as originally produced, just arranged in a grid.
+    """
+    vars_list = [('x', 'px'), ('y', 'py'), ('z', 'pz')]
+    fig, axes = plt.subplots(nrows=3, ncols=2, figsize=(12, 18))
+
+    # A helper function to generate and save a figure from ParticleGroup.plot()
+    def save_plot_as_image(pgroup, xvar, pvar):
+        # Generate figure
+        fig_local = pgroup.plot(xvar, pvar, return_figure=True)
+        
+        # Create a temporary file
+        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmpfile:
+            temp_path = tmpfile.name
+        fig_local.savefig(temp_path, dpi=150)
+        plt.close(fig_local)
+        return temp_path
+
+    for row, (x_var, p_var) in enumerate(vars_list):
+        # Predicted subplot (left column)
+        ax_pred = axes[row, 0]
+        pred_img_path = save_plot_as_image(pred_pg, x_var, p_var)
+        pred_img = mpimg.imread(pred_img_path)
+        ax_pred.imshow(pred_img)
+        ax_pred.set_title(f'{error_type.upper()} MSE Sample {idx}: Predicted {x_var}-{p_var}')
+        ax_pred.axis('off')  # Remove axis lines/ticks since it's now an image
+        os.remove(pred_img_path)  # Clean up the temporary file
+
+        # Target subplot (right column)
+        ax_target = axes[row, 1]
+        target_img_path = save_plot_as_image(target_pg, x_var, p_var)
+        target_img = mpimg.imread(target_img_path)
+        ax_target.imshow(target_img)
+        ax_target.set_title(f'{error_type.upper()} MSE Sample {idx}: Target {x_var}-{p_var}')
+        ax_target.axis('off')
+        os.remove(target_img_path)
+
+    # Add annotation with MSE and relative errors at the bottom of the figure
+    annotation_text = (f"MSE: {mse_value:.4f}\n"
+                       f"Rel. Error norm_emit_x: {rel_err_x:.4f}\n"
+                       f"Rel. Error norm_emit_y: {rel_err_y:.4f}\n"
+                       f"Rel. Error norm_emit_z: {rel_err_z:.4f}")
+    fig.text(0.5, 0.05, annotation_text, ha='center', va='center', fontsize=12,
+             bbox=dict(facecolor='white', alpha=0.8, edgecolor='black'))
+
+    plt.tight_layout(rect=[0, 0.1, 1, 1])
+    plt.savefig(os.path.join(results_folder, f'{error_type}_mse_sample_{idx}.png'))
+    plt.close(fig)
+
+
+
+# def evaluate_model(model, dataloader, device, metadata_final_path, results_folder):
+#     model.eval()
+#     all_errors = []
+#     all_predictions = []
+#     all_targets = []
+#     all_relative_errors_x = []
+#     all_relative_errors_y = []
+#     all_relative_errors_z = []
+
+#     logging.info("Starting model evaluation...")
+
+#     with torch.no_grad():
+#         all_errors = []
+#         all_predictions = []
+#         all_targets = []
+#         all_graph_indices = []  # Keep track of graph indices
+#         for batch_idx, data in enumerate(tqdm(dataloader, desc="Evaluating Model")):
+#             logging.debug(f"Processing batch {batch_idx + 1}/{len(dataloader)}")
+#             data = data.to(device)
+#             x_pred = model_forward(model, data)
+#             mse = F.mse_loss(x_pred, data.y, reduction='none').mean(dim=1)
+#             batch_indices = data.batch.cpu().numpy()
+#             graph_indices = np.unique(batch_indices)
+#             logging.debug(f"Batch {batch_idx + 1}: Number of graphs in batch: {len(graph_indices)}")
+#             for idx in graph_indices:
+#                 mask = (batch_indices == idx)
+#                 graph_mse = mse[mask].mean().item()
+#                 all_errors.append(graph_mse)
+#                 all_predictions.append(x_pred[mask].cpu())
+#                 all_targets.append(data.y[mask].cpu())
+#                 all_graph_indices.append(idx)  # Store the actual graph index
+#                 logging.debug(f"Graph {idx}: MSE={graph_mse}")
+
+#     all_errors = np.array(all_errors)
+#     all_graph_indices = np.array(all_graph_indices)  # Convert to numpy array
+#     logging.debug(f"All graph MSEs: {all_errors}")
+
+#     if len(all_errors) == 0:
+#         logging.error("No errors recorded during evaluation. Check if the dataset is empty or DataLoader is misconfigured.")
+#         sys.exit(1)
+
+#     # Sort errors to find min and max MSE samples
+#     sorted_indices = np.argsort(all_errors)
+#     num_samples = len(all_errors)
+#     num_plots = min(5, num_samples)  # Ensure we don't exceed available samples
+#     min_mse_indices = sorted_indices[:num_plots]
+#     max_mse_indices = sorted_indices[-num_plots:]
+
+#     logging.info(f"Selecting top {num_plots} samples with minimum MSE and top {num_plots} samples with maximum MSE for plotting.")
+
+#     # Print the MSE for the top 5 graphs with minimum MSE
+#     logging.info("Top 5 graphs with minimum MSE:")
+#     for idx in min_mse_indices:
+#         graph_idx = all_graph_indices[idx]
+#         mse_value = all_errors[idx]
+#         logging.info(f"Graph index: {graph_idx}, MSE: {mse_value}")
+
+#     # Print the MSE for the top 5 graphs with maximum MSE
+#     logging.info("Top 5 graphs with maximum MSE:")
+#     for idx in max_mse_indices:
+#         graph_idx = all_graph_indices[idx]
+#         mse_value = all_errors[idx]
+#         logging.info(f"Graph index: {graph_idx}, MSE: {mse_value}")
+
+#     global_mean, global_std = load_global_statistics(metadata_final_path)
+#     logging.debug(f"Loaded global_mean: {global_mean}, global_std: {global_std}")
+
+#     def inverse_normalize(normalized_data):
+#         return normalized_data * global_std + global_mean
+
+#     # Process min MSE samples
+#     for plot_idx, idx in enumerate(min_mse_indices):
+#         try:
+#             pred = all_predictions[idx]
+#             target = all_targets[idx]
+#             pred_original = inverse_normalize(pred)
+#             target_original = inverse_normalize(target)
+#             pred_pg = transform_to_particle_group(pred_original)
+#             target_pg = transform_to_particle_group(target_original)
+
+#             # Compute relative errors first
+#             pred_norm_emit_x = compute_normalized_emittance_x(pred_pg)
+#             target_norm_emit_x = compute_normalized_emittance_x(target_pg)
+#             rel_err_x = abs(pred_norm_emit_x - target_norm_emit_x) / abs(target_norm_emit_x)
+
+#             pred_norm_emit_y = compute_normalized_emittance_y(pred_pg)
+#             target_norm_emit_y = compute_normalized_emittance_y(target_pg)
+#             rel_err_y = abs(pred_norm_emit_y - target_norm_emit_y) / abs(target_norm_emit_y)
+
+#             pred_norm_emit_z = compute_normalized_emittance_z(pred_pg)
+#             target_norm_emit_z = compute_normalized_emittance_z(target_pg)
+#             rel_err_z = abs(pred_norm_emit_z - target_norm_emit_z) / abs(target_norm_emit_z)
+
+#             # Log the relative errors
+#             logging.info(f"Sample {idx} (min MSE): MSE={all_errors[idx]:.4f}, Rel. Error X={rel_err_x:.4f}, Y={rel_err_y:.4f}, Z={rel_err_z:.4f}")
+
+#             # Append to global lists
+#             all_relative_errors_x.append(rel_err_x)
+#             all_relative_errors_y.append(rel_err_y)
+#             all_relative_errors_z.append(rel_err_z)
+
+#             # Now plot and include the text
+#             plot_particle_groups(pred_pg, target_pg, idx, 'min', results_folder,
+#                                  mse_value=all_errors[idx], rel_err_x=rel_err_x, rel_err_y=rel_err_y, rel_err_z=rel_err_z)
+            
+#         except Exception as e:
+#             logging.error(f"Error processing min MSE sample {idx}: {e}")
+
+#     # Process max MSE samples
+#     for plot_idx, idx in enumerate(max_mse_indices):
+#         try:
+#             pred = all_predictions[idx]
+#             target = all_targets[idx]
+#             pred_original = inverse_normalize(pred)
+#             target_original = inverse_normalize(target)
+#             pred_pg = transform_to_particle_group(pred_original)
+#             target_pg = transform_to_particle_group(target_original)
+
+#             # Compute relative errors
+#             pred_norm_emit_x = compute_normalized_emittance_x(pred_pg)
+#             target_norm_emit_x = compute_normalized_emittance_x(target_pg)
+#             rel_err_x = abs(pred_norm_emit_x - target_norm_emit_x) / abs(target_norm_emit_x)
+
+#             pred_norm_emit_y = compute_normalized_emittance_y(pred_pg)
+#             target_norm_emit_y = compute_normalized_emittance_y(target_pg)
+#             rel_err_y = abs(pred_norm_emit_y - target_norm_emit_y) / abs(target_norm_emit_y)
+
+#             pred_norm_emit_z = compute_normalized_emittance_z(pred_pg)
+#             target_norm_emit_z = compute_normalized_emittance_z(target_pg)
+#             rel_err_z = abs(pred_norm_emit_z - target_norm_emit_z) / abs(target_norm_emit_z)
+
+#             # Log the relative errors
+#             logging.info(f"Sample {idx} (max MSE): MSE={all_errors[idx]:.4f}, Rel. Error X={rel_err_x:.4f}, Y={rel_err_y:.4f}, Z={rel_err_z:.4f}")
+
+#             # Append to global lists
+#             all_relative_errors_x.append(rel_err_x)
+#             all_relative_errors_y.append(rel_err_y)
+#             all_relative_errors_z.append(rel_err_z)
+
+#             # Plot and include the text
+#             plot_particle_groups(pred_pg, target_pg, idx, 'max', results_folder,
+#                                  mse_value=all_errors[idx], rel_err_x=rel_err_x, rel_err_y=rel_err_y, rel_err_z=rel_err_z)
+            
+#         except Exception as e:
+#             logging.error(f"Error processing max MSE sample {idx}: {e}")
+
+#     # Compute overall average relative errors
+#     if all_relative_errors_x and all_relative_errors_y and all_relative_errors_z:
+#         avg_relative_error_x = np.mean(all_relative_errors_x)
+#         avg_relative_error_y = np.mean(all_relative_errors_y)
+#         avg_relative_error_z = np.mean(all_relative_errors_z)
+#         logging.info(f"Average Relative Error in norm_emittance_x: {avg_relative_error_x:.4f}")
+#         logging.info(f"Average Relative Error in norm_emittance_y: {avg_relative_error_y:.4f}")
+#         logging.info(f"Average Relative Error in norm_emittance_z: {avg_relative_error_z:.4f}")
+#     else:
+#         logging.warning("No relative errors computed. Check if predictions and targets are correctly processed.")
 
 def evaluate_model(model, dataloader, device, metadata_final_path, results_folder):
     model.eval()
@@ -697,8 +922,8 @@ def evaluate_model(model, dataloader, device, metadata_final_path, results_folde
                 mask = (batch_indices == idx)
                 graph_mse = mse[mask].mean().item()
                 all_errors.append(graph_mse)
-                all_predictions.append(x_pred[mask].cpu())
-                all_targets.append(data.y[mask].cpu())
+                all_predictions.append(x_pred[mask].cpu().numpy())
+                all_targets.append(data.y[mask].cpu().numpy())
                 all_graph_indices.append(idx)  # Store the actual graph index
                 logging.debug(f"Graph {idx}: MSE={graph_mse}")
 
@@ -726,6 +951,34 @@ def evaluate_model(model, dataloader, device, metadata_final_path, results_folde
         mse_value = all_errors[idx]
         logging.info(f"Graph index: {graph_idx}, MSE: {mse_value}")
 
+    # Check for duplicates in min MSE graph indices
+    unique_graphs, counts = np.unique(all_graph_indices[min_mse_indices], return_counts=True)
+    duplicates = unique_graphs[counts > 1]
+    if len(duplicates) > 0:
+        logging.warning("Duplicate graphs found in the minimum MSE samples:")
+        for d in duplicates:
+            duplicate_count = counts[unique_graphs == d][0]
+            logging.warning(f"Graph index {d} appears {duplicate_count} times among the min MSE samples.")
+    else:
+        logging.info("No duplicate graphs found in the minimum MSE samples.")
+
+    # Check the actual particle data for duplicates among min MSE samples
+    logging.info("Checking particle data for duplicates among min MSE samples...")
+    for i in range(len(min_mse_indices)):
+        for j in range(i+1, len(min_mse_indices)):
+            idx_i = min_mse_indices[i]
+            idx_j = min_mse_indices[j]
+            # Compare predicted particle data
+            if np.allclose(all_predictions[idx_i], all_predictions[idx_j]):
+                logging.warning(f"Predicted particle data for samples {idx_i} and {idx_j} are nearly identical.")
+                logging.warning(f"MSE values: {all_errors[idx_i]:.4f}, {all_errors[idx_j]:.4f}")
+                logging.warning(f"Graph indices: {all_graph_indices[idx_i]}, {all_graph_indices[idx_j]}")
+            # Compare target particle data
+            if np.allclose(all_targets[idx_i], all_targets[idx_j]):
+                logging.warning(f"Target particle data for samples {idx_i} and {idx_j} are nearly identical.")
+                logging.warning(f"MSE values: {all_errors[idx_i]:.4f}, {all_errors[idx_j]:.4f}")
+                logging.warning(f"Graph indices: {all_graph_indices[idx_i]}, {all_graph_indices[idx_j]}")
+
     # Print the MSE for the top 5 graphs with maximum MSE
     logging.info("Top 5 graphs with maximum MSE:")
     for idx in max_mse_indices:
@@ -739,69 +992,68 @@ def evaluate_model(model, dataloader, device, metadata_final_path, results_folde
     def inverse_normalize(normalized_data):
         return normalized_data * global_std + global_mean
 
-    # For min MSE samples
+    # Process min MSE samples
     for plot_idx, idx in enumerate(min_mse_indices):
         try:
-            pred = all_predictions[idx]
-            target = all_targets[idx]
-            logging.debug(f"Min MSE Sample {idx}: Preparing to plot.")
+            pred = torch.tensor(all_predictions[idx])  # Convert back to tensor if needed
+            target = torch.tensor(all_targets[idx])
             pred_original = inverse_normalize(pred)
             target_original = inverse_normalize(target)
             pred_pg = transform_to_particle_group(pred_original)
             target_pg = transform_to_particle_group(target_original)
-            plot_particle_groups(pred_pg, target_pg, idx, 'min', results_folder)
+
+            # Compute relative errors first
             pred_norm_emit_x = compute_normalized_emittance_x(pred_pg)
             target_norm_emit_x = compute_normalized_emittance_x(target_pg)
-            relative_error = abs(pred_norm_emit_x - target_norm_emit_x) / abs(target_norm_emit_x)
-            logging.info(f"Sample {idx} (min MSE): Relative Error in norm_emit_x: {relative_error:.4f}")
-            # Append to relative errors lists
-            all_relative_errors_x.append(relative_error)
-            
-            # Similarly compute and append for y and z
+            rel_err_x = abs(pred_norm_emit_x - target_norm_emit_x) / abs(target_norm_emit_x)
+
             pred_norm_emit_y = compute_normalized_emittance_y(pred_pg)
             target_norm_emit_y = compute_normalized_emittance_y(target_pg)
-            relative_error_y = abs(pred_norm_emit_y - target_norm_emit_y) / abs(target_norm_emit_y)
-            logging.info(f"Sample {idx} (min MSE): Relative Error in norm_emit_y: {relative_error_y:.4f}")
-            all_relative_errors_y.append(relative_error_y)
-            
+            rel_err_y = abs(pred_norm_emit_y - target_norm_emit_y) / abs(target_norm_emit_y)
+
             pred_norm_emit_z = compute_normalized_emittance_z(pred_pg)
             target_norm_emit_z = compute_normalized_emittance_z(target_pg)
-            relative_error_z = abs(pred_norm_emit_z - target_norm_emit_z) / abs(target_norm_emit_z)
-            logging.info(f"Sample {idx} (min MSE): Relative Error in norm_emit_z: {relative_error_z:.4f}")
-            all_relative_errors_z.append(relative_error_z)
+            rel_err_z = abs(pred_norm_emit_z - target_norm_emit_z) / abs(target_norm_emit_z)
+
+            # Log the relative errors
+            logging.info(f"Sample {idx} (min MSE): MSE={all_errors[idx]:.4f}, Rel. Error X={rel_err_x:.4f}, Y={rel_err_y:.4f}, Z={rel_err_z:.4f}")
+
+            # Now plot and include the text
+            plot_particle_groups(pred_pg, target_pg, idx, 'min', results_folder,
+                                 mse_value=all_errors[idx], rel_err_x=rel_err_x, rel_err_y=rel_err_y, rel_err_z=rel_err_z)
             
         except Exception as e:
             logging.error(f"Error processing min MSE sample {idx}: {e}")
 
-    # For max MSE samples
+    # Process max MSE samples
     for plot_idx, idx in enumerate(max_mse_indices):
         try:
-            pred = all_predictions[idx]
-            target = all_targets[idx]
-            logging.debug(f"Max MSE Sample {idx}: Preparing to plot.")
+            pred = torch.tensor(all_predictions[idx])
+            target = torch.tensor(all_targets[idx])
             pred_original = inverse_normalize(pred)
             target_original = inverse_normalize(target)
             pred_pg = transform_to_particle_group(pred_original)
             target_pg = transform_to_particle_group(target_original)
-            plot_particle_groups(pred_pg, target_pg, idx, 'max', results_folder)
+
+            # Compute relative errors
             pred_norm_emit_x = compute_normalized_emittance_x(pred_pg)
             target_norm_emit_x = compute_normalized_emittance_x(target_pg)
-            relative_error = abs(pred_norm_emit_x - target_norm_emit_x) / abs(target_norm_emit_x)
-            logging.info(f"Sample {idx} (max MSE): Relative Error in norm_emit_x: {relative_error:.4f}")
-            # Append to relative errors lists
-            all_relative_errors_x.append(relative_error)
-            # Similarly compute and append for y and z
+            rel_err_x = abs(pred_norm_emit_x - target_norm_emit_x) / abs(target_norm_emit_x)
+
             pred_norm_emit_y = compute_normalized_emittance_y(pred_pg)
             target_norm_emit_y = compute_normalized_emittance_y(target_pg)
-            relative_error_y = abs(pred_norm_emit_y - target_norm_emit_y) / abs(target_norm_emit_y)
-            logging.info(f"Sample {idx} (max MSE): Relative Error in norm_emit_y: {relative_error_y:.4f}")
-            all_relative_errors_y.append(relative_error_y)
-            
+            rel_err_y = abs(pred_norm_emit_y - target_norm_emit_y) / abs(target_norm_emit_y)
+
             pred_norm_emit_z = compute_normalized_emittance_z(pred_pg)
             target_norm_emit_z = compute_normalized_emittance_z(target_pg)
-            relative_error_z = abs(pred_norm_emit_z - target_norm_emit_z) / abs(target_norm_emit_z)
-            logging.info(f"Sample {idx} (max MSE): Relative Error in norm_emit_z: {relative_error_z:.4f}")
-            all_relative_errors_z.append(relative_error_z)
+            rel_err_z = abs(pred_norm_emit_z - target_norm_emit_z) / abs(target_norm_emit_z)
+
+            # Log the relative errors
+            logging.info(f"Sample {idx} (max MSE): MSE={all_errors[idx]:.4f}, Rel. Error X={rel_err_x:.4f}, Y={rel_err_y:.4f}, Z={rel_err_z:.4f}")
+
+            plot_particle_groups(pred_pg, target_pg, idx, 'max', results_folder,
+                                 mse_value=all_errors[idx], rel_err_x=rel_err_x, rel_err_y=rel_err_y, rel_err_z=rel_err_z)
+            
         except Exception as e:
             logging.error(f"Error processing max MSE sample {idx}: {e}")
 
@@ -815,6 +1067,7 @@ def evaluate_model(model, dataloader, device, metadata_final_path, results_folde
         logging.info(f"Average Relative Error in norm_emittance_z: {avg_relative_error_z:.4f}")
     else:
         logging.warning("No relative errors computed. Check if predictions and targets are correctly processed.")
+
 
 
 def model_forward(model, data):
@@ -867,9 +1120,17 @@ def model_forward(model, data):
                 data.batch
             )
         else:  # PointNet
-            initial_states = data.x[:, :6]
-            settings = data.x[:, 6:]
+            # print(settings)
+                        
+            initial_states = data.x[:, :6].reshape((1, 2000, 6))
+            # initial_states = initial_states.permute(0, 2, 1)
+            settings = data.x[0, 6:].reshape((1, 6))
+            
+            print("shape of initial_states", initial_states.shape)
+            print("shape of settings", settings.shape)
             x_pred = model(initial_states, settings)
+            
+            x_pred = x_pred.squeeze()
             
         logging.debug(f"Model forward pass successful. Output shape: {x_pred.shape}")
     except Exception as e:
@@ -996,7 +1257,7 @@ def main():
     # Get a sample data for model initialization
     try:
         sample = dataset[0]
-        # logging.debug(f"Sample data retrieved: {sample}")
+        logging.debug(f"Sample data retrieved: {sample}")
     except Exception as e:
         logging.error(f"Error retrieving sample data from dataset: {e}")
         sys.exit(1)
