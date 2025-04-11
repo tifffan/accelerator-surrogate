@@ -9,7 +9,7 @@
 #SBATCH --gpus-per-node=4
 #SBATCH --nodes=1
 #SBATCH --mem-per-cpu=64G
-#SBATCH --time=33:30:00
+#SBATCH --time=3:30:00
 
 # Set the PYTHONPATH to include your project directory
 export PYTHONPATH=/sdf/home/t/tiffan/repo/accelerator-surrogate
@@ -38,14 +38,14 @@ BATCH_SIZE=4
 N_TRAIN=3324
 N_VAL=416
 N_TEST=0
-RANDOM_SEED=63
+RANDOM_SEED=1216
 
 NUM_EPOCHS=1000
 HIDDEN_DIM=256
-NUM_LAYERS=4
+NUM_LAYERS=6
 
-LEARNING_RATE=5e-5
-WEIGHT_DECAY=1e-4
+LEARNING_RATE=5e-4
+WEIGHT_DECAY=1e-3
 
 # Model and results
 MODEL="pn0-start"

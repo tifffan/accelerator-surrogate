@@ -9,7 +9,7 @@
 #SBATCH --gpus-per-node=4
 #SBATCH --nodes=1
 #SBATCH --mem-per-cpu=16G
-#SBATCH --time=33:30:00
+#SBATCH --time=3:30:00
 
 # Set the PYTHONPATH to include your project directory
 export PYTHONPATH=/sdf/home/t/tiffan/repo/accelerator-surrogate
@@ -39,7 +39,7 @@ DATA_KEYWORD="knn_k5_weighted"
 TASK="predict_n6d"
 MODE="train"
 
-INITIAL_STEP=10
+INITIAL_STEP=25
 FINAL_STEP=76
 
 NTRAIN=1600
